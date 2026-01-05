@@ -1,25 +1,21 @@
-public class GameState {
+public class GameLoader {
 
     // ============================================================
-    // TODO: Implement generatePossibleMoves()
+    // TODO: Implement constructor
     // ------------------------------------------------------------
-    // This method should generate all possible moves based on:
-    //  - The current piece positions
-    //  - The current dice roll
+    // This method read data from the given filename and stores
+    // them in appropriate variables
     //
     // You may decide on the return type, parameters, and internal logic.
     // ============================================================
 
-
     // ============================================================
-    // TODO: Implement isWinning()
+    // TODO: Implement printGameDetails()
     // ------------------------------------------------------------
-    // This method should check whether the current piece positions
-    // fulfill the winning condition
+    // This method print the game setup details into "moves.txt"
     //
     // You may decide on the return type, parameters, and internal logic.
     // ============================================================
-
 
     // You may also add any other helper functions, variables,
     // and constructors needed for your implementation.
