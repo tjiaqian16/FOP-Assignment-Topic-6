@@ -1,22 +1,18 @@
+import java.io.PrintWriter;
+
 public abstract class Player {
-    // ============================================================
-    // TODO: Implement printMove()
-    // ------------------------------------------------------------
-    // This method print the chosen move of the player into the
-    // "moves.txt" file
-    //
-    // You may decide on the return type, parameters, and internal logic.
-    // ============================================================
-
-    // ============================================================
-    // TODO: Implement abstract function - chooseMove()
-    // ------------------------------------------------------------
-    // This is an abstract method that defines how the player selects
-    // a move. You should implement the logic in the subclasses.
-    //
-    // You may decide on the return type, and parameters.
-    // ============================================================
-
-    // You may also add any other helper functions, variables,
-    // and constructors needed for your implementation.
+    /**
+     * Records the current positions of all pieces into the moves.txt file.
+     * This ensures all player types (Human, Random, AI) log data the same way.
+     */
+    public void recordMove(int[] positions, PrintWriter writer) {
+        for (int i = 0; i < positions.length; i++) {
+            writer.print(positions[i]);
+            if (i < positions.length - 1) {
+                writer.print(" ");
+            }
+        }
+        writer.println();
+        writer.flush(); // Ensures data is actually written to the file
+    }
 }
