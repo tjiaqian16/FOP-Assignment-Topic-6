@@ -140,8 +140,8 @@ public class GameGUI extends JFrame {
             infoLabel.setText("Turn " + (currentTurn + 1) + " | Dice: " + dice + " | No moves possible.");
         } else {
             // Using AI Player logic to automate the move for the GUI
-            AIPlayer ai = new AIPlayer(gameState.targetPiece);
-            int chosenMove = ai.chooseMove(moves, currentPositions);
+            AIPlayer ai = new AIPlayer(gameState.targetPiece, loader);
+            int chosenMove = ai.chooseMove(moves, currentPositions, currentTurn);
 
             int pieceToMove = chosenMove / 100;
             int destination = chosenMove % 100;
