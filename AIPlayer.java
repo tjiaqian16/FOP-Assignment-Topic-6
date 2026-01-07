@@ -25,7 +25,7 @@ public class AIPlayer {
         State parent;
 
         State(int[] positions, int turn, int gCost, double hCost, int lastMove, State parent) {
-            this.positions = positions;
+            this.positions = positions.clone(); // Defensive copy
             this.turn = turn;
             this.gCost = gCost;
             this.fCost = gCost + hCost;
