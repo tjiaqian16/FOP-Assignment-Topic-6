@@ -3,12 +3,16 @@ import java.util.*;
 public class AIPlayer {
     private int targetPiece;
     private GameLoader loader;
+    private GameState gameState; // For generating moves
     private static final int GOAL_POS = 0;
     private static final int OBSTACLE_POS = 22;
+    private static final int MAX_SEARCH_DEPTH = 30;
+    private static final int CAPTURED_PENALTY = 1000000;
 
     public AIPlayer(int targetPiece, GameLoader loader) {
         this.targetPiece = targetPiece;
         this.loader = loader;
+        this.gameState = new GameState();
     }
 
     /**
@@ -42,7 +46,7 @@ public class AIPlayer {
      */
     private int heuristic(int[] positions) {
         int targetPos = positions[targetPiece - 1];
-        if (targetPos == -1) return 1000000; // Target captured = very bad
+        if (targetPos == -1) return CAPTURED_PENALTY; // Target captured = very bad
         if (targetPos == GOAL_POS) return 0; // Goal reached
         
         int row = targetPos / 10;
@@ -66,7 +70,7 @@ public class AIPlayer {
         bestCosts.put(stateKey(currentPositions, currentTurn), 0);
         
         SearchNode goalNode = null;
-        int maxDepth = Math.min(30, loader.diceSequence.size()) - currentTurn; // Don't exceed dice sequence
+        int maxDepth = Math.max(1, Math.min(MAX_SEARCH_DEPTH, loader.diceSequence.size()) - currentTurn); // Don't exceed dice sequence
         
         while (!openSet.isEmpty()) {
             SearchNode current = openSet.poll();
@@ -87,11 +91,11 @@ public class AIPlayer {
                 continue; // We've found a better path to this state already
             }
             
-            // Get the next dice value from the sequence
+            // Get the next dice value from the sequence (safe - already checked bounds above)
             int nextDice = loader.diceSequence.get(current.turn);
             
-            // Generate all possible successor states
-            List<Integer> moves = getSimulatedMoves(nextDice, current.positions);
+            // Generate all possible successor states using GameState logic
+            List<Integer> moves = gameState.generatePossibleMoves(nextDice, current.positions);
             
             for (int move : moves) {
                 int[] nextPositions = simulateMove(current.positions, move);
@@ -139,50 +143,6 @@ public class AIPlayer {
      */
     private String stateKey(int[] positions, int turn) {
         return Arrays.toString(positions) + ":" + turn;
-    }
-
-    /**
-     * Replicates the game logic to generate valid moves for a given dice roll.
-     * Similar to GameState.generatePossibleMoves.
-     */
-    private List<Integer> getSimulatedMoves(int diceNumber, int[] positions) {
-        List<Integer> possiblePieces = new ArrayList<>();
-        int pieceIdx = diceNumber - 1;
-
-        if (positions[pieceIdx] != -1) {
-            possiblePieces.add(diceNumber);
-        } else {
-            // Find next smallest available
-            for (int i = pieceIdx - 1; i >= 0; i--) {
-                if (positions[i] != -1) { possiblePieces.add(i + 1); break; }
-            }
-            // Find next biggest available
-            for (int i = pieceIdx + 1; i < 6; i++) {
-                if (positions[i] != -1) { possiblePieces.add(i + 1); break; }
-            }
-        }
-
-        List<Integer> moves = new ArrayList<>();
-        int[] dr = {-1, -1, -1, 0, 0, 1, 1, 1};
-        int[] dc = {-1, 0, 1, -1, 1, -1, 0, 1};
-
-        for (int pNum : possiblePieces) {
-            int pos = positions[pNum - 1];
-            int r = pos / 10;
-            int c = pos % 10;
-
-            for (int i = 0; i < 8; i++) {
-                int nr = r + dr[i];
-                int nc = c + dc[i];
-                if (nr >= 0 && nr < 10 && nc >= 0 && nc < 10) {
-                    int nPos = nr * 10 + nc;
-                    if (nPos != OBSTACLE_POS) {
-                        moves.add(pNum * 100 + nPos);
-                    }
-                }
-            }
-        }
-        return moves;
     }
 
     /**
