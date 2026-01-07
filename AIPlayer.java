@@ -40,7 +40,13 @@ public class AIPlayer {
             int fCompare = Double.compare(this.fCost(), other.fCost());
             if (fCompare != 0) return fCompare;
             // Tie-breaking: prefer lower h-cost (closer to goal)
-            return Double.compare(this.hCost, other.hCost);
+            int hCompare = Double.compare(this.hCost, other.hCost);
+            if (hCompare != 0) return hCompare;
+            // Further tie-breaking: prefer fewer alive pieces (simpler state)
+            int aliveThis = 0, aliveOther = 0;
+            for (int p : this.positions) if (p != -1) aliveThis++;
+            for (int p : other.positions) if (p != -1) aliveOther++;
+            return Integer.compare(aliveThis, aliveOther);
         }
 
         String stateKey() {
@@ -66,9 +72,18 @@ public class AIPlayer {
             gScores.put(node.stateKey(), 1);
         }
         
+        // Track best solution found
+        AStarNode bestSolution = null;
+        int bestMoves = Integer.MAX_VALUE;
+        
         // A* search
         while (!openSet.isEmpty()) {
             AStarNode current = openSet.poll();
+            
+            // If we found a good solution and current is worse, prune
+            if (current.gCost >= bestMoves) {
+                continue;
+            }
             
             String stateKey = current.stateKey();
             
@@ -79,12 +94,16 @@ public class AIPlayer {
             
             // Check if we've reached the goal
             if (isWinningState(current.positions)) {
-                // Return the first solution found (A* guarantees optimality)
-                return getFirstMove(current);
+                if (current.gCost < bestMoves) {
+                    bestMoves = current.gCost;
+                    bestSolution = current;
+                }
+                // Return the first solution found
+                return getFirstMove(bestSolution);
             }
             
-            // Check if we've exceeded the dice sequence or depth limit
-            if (current.turn >= loader.diceSequence.size() || current.gCost > 25) {
+            // Check if we've exceeded the dice sequence
+            if (current.turn >= loader.diceSequence.size()) {
                 continue;
             }
             
@@ -113,6 +132,11 @@ public class AIPlayer {
                     gScores.put(nextKey, newGCost);
                 }
             }
+        }
+        
+        // Return best solution found
+        if (bestSolution != null) {
+            return getFirstMove(bestSolution);
         }
         
         // If no winning path found, return the first possible move
