@@ -144,11 +144,15 @@ public class AIPlayer {
     
     /**
      * Creates a unique key for a game state (positions + turn)
-     * Uses hashCode for efficient key generation
+     * Uses StringBuilder to avoid collision issues with hash concatenation
      */
     private String stateKey(int[] positions, int turn) {
-        // Combine position array hash with turn for efficient key
-        return Arrays.hashCode(positions) + ":" + turn;
+        StringBuilder sb = new StringBuilder();
+        for (int pos : positions) {
+            sb.append(pos).append(',');
+        }
+        sb.append(':').append(turn);
+        return sb.toString();
     }
 
     /**
