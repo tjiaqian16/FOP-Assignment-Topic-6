@@ -70,7 +70,9 @@ public class AIPlayer {
         bestCosts.put(stateKey(currentPositions, currentTurn), 0);
         
         SearchNode goalNode = null;
-        int maxDepth = Math.max(1, Math.min(MAX_SEARCH_DEPTH, loader.diceSequence.size() - currentTurn)); // Don't exceed dice sequence
+        // Calculate maximum search depth: use remaining dice sequence length, capped at MAX_SEARCH_DEPTH
+        // Math.max(1, ...) ensures depth is always at least 1 even if no more dice available
+        int maxDepth = Math.max(1, Math.min(MAX_SEARCH_DEPTH, loader.diceSequence.size() - currentTurn));
         
         while (!openSet.isEmpty()) {
             SearchNode current = openSet.poll();
@@ -124,7 +126,8 @@ public class AIPlayer {
         
         // If no path to goal found, use greedy heuristic: pick move that minimizes heuristic
         if (possibleMoves.isEmpty()) {
-            return -1; // Should not happen in practice
+            // This should never happen as GameMain/GameGUI check for empty moves before calling
+            return -1;
         }
         
         int bestMove = possibleMoves.get(0);
