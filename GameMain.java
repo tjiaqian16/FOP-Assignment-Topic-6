@@ -5,47 +5,100 @@ public class GameMain {
     public static void main(String[] args) throws Exception {
         Scanner input = new Scanner(System.in);
         
-        // 1. Prompt user for player mode [cite: 84]
-        System.out.println("Select Mode (1: Human Player, 2: Random Player, 3: AI Player): ");
-        int mode = input.nextInt();
+        // 1. Prompt user for player mode with validation
+        int mode = -1;
+        while (true) {
+            System.out.println("Select Mode (1: Human Player, 2: Random Player, 3: AI Player): ");
+            if (input.hasNextInt()) {
+                mode = input.nextInt();
+                if (mode >= 1 && mode <= 3) {
+                    break; 
+                }
+            } else {
+                input.next(); 
+            }
+            System.out.println("Invalid choice. Please enter 1, 2, or 3.");
+        }
         
-        // 2. Prompt for player name based on mode [cite: 86]
+        // 2. Prompt for player name based on mode with alphanumeric validation
         String playerName;
         if (mode == 1) {
-            System.out.print("Enter the name of the human player: ");
-            playerName = input.next();
+            while (true) {
+                System.out.print("Enter the name of the human player (letters and digits only): ");
+                playerName = input.next();
+                // Regex checks for letters and numbers only
+                if (playerName.matches("^[a-zA-Z0-9]+$")) {
+                    break;
+                } else {
+                    System.out.println("Invalid name! Please use only alphabets and digits (no spaces or symbols).");
+                }
+            }
         } else if (mode == 2) {
-            playerName = "Random Player";
+            playerName = "RandomPlayer";
         } else {
-            playerName = "AI Player";
+            playerName = "AIPlayer";
         }
 
-        // 3. Prompt user for level NUMBER 
-        System.out.print("Enter the level number (1, 2, 3, or 4): ");
-        int levelNum = input.nextInt();
-        String levelFile = "level" + levelNum + ".txt"; // Automatically adds the filename format [cite: 147-151]
+        // 3. Prompt user for level number with validation
+        int levelNum = -1;
+        while (true) {
+            System.out.print("Enter the level number (1, 2, 3, or 4): ");
+            if (input.hasNextInt()) {
+                levelNum = input.nextInt();
+                if (levelNum >= 1 && levelNum <= 4) {
+                    break; 
+                }
+            } else {
+                input.next(); 
+            }
+            System.out.println("Invalid level. Please enter a number between 1 and 4.");
+        }
+        
+        String levelFile = "level" + levelNum + ".txt";
 
-        // Load game data [cite: 64, 70]
+        // Load game data
         GameLoader loader = new GameLoader(levelFile);
         GameState game = new GameState();
         game.targetPiece = loader.targetPiece;
         int[] currentPositions = loader.initialPositions.clone();
 
-        // Initialize output file [cite: 72]
+        // Start Announcement
+        System.out.println("\n========================================");
+        System.out.println("GAME STARTING: Target Piece is " + game.targetPiece);
+        System.out.println("Goal: Reach Square 0 in 30 moves.");
+        System.out.println("========================================\n");
+
+        // Initialize output file
         PrintWriter writer = new PrintWriter(new FileWriter("moves.txt"));
         loader.printGameDetails(playerName, writer);
 
         boolean won = false;
-        // Game loop: Max 30 moves [cite: 58, 102]
-        for (int turn = 0; turn < 30 && turn < loader.diceSequence.size(); turn++) {
+        boolean targetCaptured = false;
+        int maxMoves = 30;
+
+        // Game loop: Max 30 moves
+        for (int turn = 0; turn < maxMoves && turn < loader.diceSequence.size(); turn++) {
+            int remainingMoves = maxMoves - turn;
+            System.out.println("--- Turn " + (turn + 1) + " | Moves Remaining: " + remainingMoves + " ---");
+
+            // Check if target is still on the board
+            if (currentPositions[game.targetPiece - 1] == -1) {
+                targetCaptured = true;
+                break;
+            }
+
             int dice = loader.diceSequence.get(turn);
             List<Integer> moves = game.generatePossibleMoves(dice, currentPositions);
             
-            if (moves.isEmpty()) break;
+            if (moves.isEmpty()) {
+                System.out.println("No possible moves available!");
+                break;
+            }
 
+            // FIX: Variable declared here to avoid scope error
             int chosenMove = -1;
 
-            // 4. Obtain moves from selected player [cite: 65, 88]
+            // 4. Obtain moves from selected player
             if (mode == 1) {
                 HumanPlayer hp = new HumanPlayer();
                 chosenMove = hp.chooseMove(moves);
@@ -55,39 +108,50 @@ public class GameMain {
             } else if (mode == 3) {
                 AIPlayer ai = new AIPlayer(game.targetPiece);
                 chosenMove = ai.chooseMove(moves, currentPositions);
+                System.out.println("AI chose Piece " + (chosenMove / 100) + " to Square " + (chosenMove % 100));
             }
 
-            // 5. Execute move logic [cite: 53, 54]
+            // 5. Execute move logic
             int pieceToMove = chosenMove / 100;
             int destination = chosenMove % 100;
 
-            // Capture logic [cite: 55, 56]
+            // Capture logic
             for (int i = 0; i < 6; i++) {
                 if (currentPositions[i] == destination) {
-                    currentPositions[i] = -1;
+                    currentPositions[i] = -1; 
                 }
             }
             currentPositions[pieceToMove - 1] = destination;
 
-            // 6. Log positions to moves.txt [cite: 81, 82, 102]
+            // 6. Log positions to moves.txt
             for (int i = 0; i < 6; i++) {
                 writer.print(currentPositions[i] + (i == 5 ? "" : " "));
             }
             writer.println();
 
-            // 7. Check winning condition [cite: 75, 76]
+            // 7. Check winning condition
             if (game.isWinning(currentPositions)) {
                 won = true;
+                break;
+            }
+
+            // 8. Immediate check if target was captured by another piece
+            if (currentPositions[game.targetPiece - 1] == -1) {
+                targetCaptured = true;
                 break;
             }
         }
         
         writer.close();
-        // 8. Show result [cite: 66, 89]
+
+        // 9. Show final result
         if (won) {
-            System.out.println("Puzzle solved successfully!");
+            System.out.println("\nSUCCESS: Puzzle solved successfully!");
+        } else if (targetCaptured) {
+            System.out.println("\nFAILED: Target piece " + game.targetPiece + " was captured!");
         } else {
-            System.out.println("Puzzle not solved.");
+            System.out.println("\nFAILED: Puzzle not solved within 30 moves.");
         }
+        input.close();
     }
 }

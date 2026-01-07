@@ -19,7 +19,7 @@ public class HumanPlayer {
      * @return The integer representing the chosen move.
      */
     public int chooseMove(List<Integer> possibleMoves) {
-        System.out.println("\n--- Human Player's Turn ---");
+        System.out.println("--- Human Player's Turn ---");
         System.out.println("Available Moves:");
 
         // List all possible moves to the user

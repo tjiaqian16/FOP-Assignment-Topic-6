@@ -48,6 +48,6 @@ public class GameState {
     }
 
     public boolean isWinning(int[] currentPositions) {
-        return currentPositions[targetPiece - 1] == 0; // Win if target reaches 0
-    }
+    return currentPositions[targetPiece - 1] == 0;
+}
 }
