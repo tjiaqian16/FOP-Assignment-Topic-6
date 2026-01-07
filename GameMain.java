@@ -8,14 +8,14 @@ public class GameMain {
         // 1. Prompt user for player mode with validation
         int mode = -1;
         while (true) {
-            System.out.println("Select Mode (1: Human Player, 2: Random Player, 3: AI Player): ");
+            System.out.print("Select Mode (1: Human Player, 2: Random Player, 3: AI Player): ");
             if (input.hasNextInt()) {
                 mode = input.nextInt();
                 if (mode >= 1 && mode <= 3) {
                     break; 
                 }
             } else {
-                input.next(); 
+                input.next(); // Clear invalid non-integer input
             }
             System.out.println("Invalid choice. Please enter 1, 2, or 3.");
         }
@@ -26,11 +26,11 @@ public class GameMain {
             while (true) {
                 System.out.print("Enter the name of the human player (letters and digits only): ");
                 playerName = input.next();
-                // Regex checks for letters and numbers only
+                // Regex ensures only alphanumeric characters are used
                 if (playerName.matches("^[a-zA-Z0-9]+$")) {
                     break;
                 } else {
-                    System.out.println("Invalid name! Please use only alphabets and digits (no spaces or symbols).");
+                    System.out.println("Invalid name! Please use only alphabets and digits.");
                 }
             }
         } else if (mode == 2) {
@@ -81,7 +81,7 @@ public class GameMain {
             int remainingMoves = maxMoves - turn;
             System.out.println("--- Turn " + (turn + 1) + " | Moves Remaining: " + remainingMoves + " ---");
 
-            // Check if target is still on the board
+            // Pre-turn check: is target still on board?
             if (currentPositions[game.targetPiece - 1] == -1) {
                 targetCaptured = true;
                 break;
@@ -95,7 +95,6 @@ public class GameMain {
                 break;
             }
 
-            // FIX: Variable declared here to avoid scope error
             int chosenMove = -1;
 
             // 4. Obtain moves from selected player
@@ -105,10 +104,13 @@ public class GameMain {
             } else if (mode == 2) {
                 RandomPlayer rp = new RandomPlayer();
                 chosenMove = rp.chooseMove(moves);
+                System.out.println("Random Player chose Piece " + (chosenMove / 100) + " to Square " + (chosenMove % 100));
+                System.out.println();
             } else if (mode == 3) {
                 AIPlayer ai = new AIPlayer(game.targetPiece);
                 chosenMove = ai.chooseMove(moves, currentPositions);
                 System.out.println("AI chose Piece " + (chosenMove / 100) + " to Square " + (chosenMove % 100));
+                System.out.println();
             }
 
             // 5. Execute move logic
@@ -128,6 +130,7 @@ public class GameMain {
                 writer.print(currentPositions[i] + (i == 5 ? "" : " "));
             }
             writer.println();
+            writer.flush();
 
             // 7. Check winning condition
             if (game.isWinning(currentPositions)) {
@@ -135,7 +138,7 @@ public class GameMain {
                 break;
             }
 
-            // 8. Immediate check if target was captured by another piece
+            // 8. Post-move check: was target just captured?
             if (currentPositions[game.targetPiece - 1] == -1) {
                 targetCaptured = true;
                 break;
@@ -144,14 +147,17 @@ public class GameMain {
         
         writer.close();
 
-        // 9. Show final result
+        // 9. Show final results
+        System.out.println("========================================");
         if (won) {
-            System.out.println("\nSUCCESS: Puzzle solved successfully!");
+            System.out.println("CONGRATULATIONS! Puzzle solved successfully.");
         } else if (targetCaptured) {
-            System.out.println("\nFAILED: Target piece " + game.targetPiece + " was captured!");
+            System.out.println("FAILED! Target piece " + game.targetPiece + " was captured.");
         } else {
-            System.out.println("\nFAILED: Puzzle not solved within 30 moves.");
+            System.out.println("FAILED! Puzzle not solved within 30 moves.");
         }
+        System.out.println("========================================\n");
+        
         input.close();
     }
 }
