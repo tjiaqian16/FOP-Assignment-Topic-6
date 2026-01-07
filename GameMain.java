@@ -31,6 +31,12 @@ public class GameMain {
         game.targetPiece = loader.targetPiece;
         int[] currentPositions = loader.initialPositions.clone();
 
+        // Initialize AIPlayer outside the loop if in AI mode
+        AIPlayer ai = null;
+        if (mode == 3) {
+            ai = new AIPlayer(loader);
+        }
+
         // Initialize output file [cite: 72]
         PrintWriter writer = new PrintWriter(new FileWriter("moves.txt"));
         loader.printGameDetails(playerName, writer);
@@ -53,8 +59,7 @@ public class GameMain {
                 RandomPlayer rp = new RandomPlayer();
                 chosenMove = rp.chooseMove(moves);
             } else if (mode == 3) {
-                AIPlayer ai = new AIPlayer(game.targetPiece);
-                chosenMove = ai.chooseMove(moves, currentPositions);
+                chosenMove = ai.chooseMove(moves, currentPositions, turn);
             }
 
             // 5. Execute move logic [cite: 53, 54]

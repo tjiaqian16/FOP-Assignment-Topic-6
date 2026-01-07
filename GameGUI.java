@@ -15,6 +15,7 @@ public class GameGUI extends JFrame {
     // Game Data
     private GameState gameState;
     private GameLoader loader;
+    private AIPlayer aiPlayer;
     private int[] currentPositions;
     private int currentTurn = 0;
     private int targetPiece;
@@ -108,6 +109,9 @@ public class GameGUI extends JFrame {
             gameState.targetPiece = loader.targetPiece;
             this.targetPiece = loader.targetPiece;
             
+            // Initialize AI Player
+            aiPlayer = new AIPlayer(loader);
+            
             // Clone initial positions so we don't modify the loader's copy
             currentPositions = loader.initialPositions.clone();
             currentTurn = 0;
@@ -140,8 +144,7 @@ public class GameGUI extends JFrame {
             infoLabel.setText("Turn " + (currentTurn + 1) + " | Dice: " + dice + " | No moves possible.");
         } else {
             // Using AI Player logic to automate the move for the GUI
-            AIPlayer ai = new AIPlayer(gameState.targetPiece);
-            int chosenMove = ai.chooseMove(moves, currentPositions);
+            int chosenMove = aiPlayer.chooseMove(moves, currentPositions, currentTurn);
 
             int pieceToMove = chosenMove / 100;
             int destination = chosenMove % 100;

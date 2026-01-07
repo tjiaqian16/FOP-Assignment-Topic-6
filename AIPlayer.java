@@ -2,133 +2,186 @@ import java.util.*;
 
 public class AIPlayer {
     private int targetPiece;
-    private int[] distanceMap; // Precomputed BFS distances to goal
+    private GameLoader loader;
     private static final int GOAL_POS = 0;
     private static final int OBSTACLE_POS = 22;
-    private static final int SEARCH_DEPTH = 3; // Lookahead depth (Me -> Dice -> Me -> Dice -> Eval)
 
-    public AIPlayer(int targetPiece) {
-        this.targetPiece = targetPiece;
-        initDistanceMap();
+    public AIPlayer(GameLoader loader) {
+        this.loader = loader;
+        this.targetPiece = loader.targetPiece;
     }
 
     /**
-     * Initializes a lookup table for the shortest path distance from every square to the goal (0),
-     * accounting for the obstacle at 22.
+     * A* Node represents a state in the search tree
      */
-    private void initDistanceMap() {
-        distanceMap = new int[100];
-        Arrays.fill(distanceMap, -1);
-        Queue<Integer> queue = new LinkedList<>();
-        
-        // Start BFS from the goal
-        distanceMap[GOAL_POS] = 0;
-        queue.add(GOAL_POS);
-        
-        int[] dr = {-1, -1, -1, 0, 0, 1, 1, 1};
-        int[] dc = {-1, 0, 1, -1, 1, -1, 0, 1};
+    private static class AStarNode implements Comparable<AStarNode> {
+        int[] positions;
+        int turn;
+        int gCost; // Actual cost from start (number of moves)
+        double hCost; // Heuristic cost to goal
+        int moveFromParent; // The move that led to this state
+        AStarNode parent;
 
-        while (!queue.isEmpty()) {
-            int curr = queue.poll();
-            int r = curr / 10;
-            int c = curr % 10;
-            int dist = distanceMap[curr];
+        AStarNode(int[] positions, int turn, int gCost, double hCost, int moveFromParent, AStarNode parent) {
+            this.positions = positions.clone();
+            this.turn = turn;
+            this.gCost = gCost;
+            this.hCost = hCost;
+            this.moveFromParent = moveFromParent;
+            this.parent = parent;
+        }
 
-            for (int i = 0; i < 8; i++) {
-                int nr = r + dr[i];
-                int nc = c + dc[i];
-                if (nr >= 0 && nr < 10 && nc >= 0 && nc < 10) {
-                    int nextPos = nr * 10 + nc;
-                    if (nextPos != OBSTACLE_POS && distanceMap[nextPos] == -1) {
-                        distanceMap[nextPos] = dist + 1;
-                        queue.add(nextPos);
-                    }
+        double fCost() {
+            return gCost + hCost;
+        }
+
+        @Override
+        public int compareTo(AStarNode other) {
+            int fCompare = Double.compare(this.fCost(), other.fCost());
+            if (fCompare != 0) return fCompare;
+            // Tie-breaking: prefer lower h-cost (closer to goal)
+            return Double.compare(this.hCost, other.hCost);
+        }
+
+        String stateKey() {
+            return Arrays.toString(positions) + ":" + turn;
+        }
+    }
+
+    /**
+     * Uses A* search to choose the best move.
+     * Returns the first move in the optimal path to the goal.
+     */
+    public int chooseMove(List<Integer> possibleMoves, int[] currentPositions, int currentTurn) {
+        // Priority queue for A* (ordered by f-cost)
+        PriorityQueue<AStarNode> openSet = new PriorityQueue<>();
+        Map<String, Integer> gScores = new HashMap<>(); // Best g-score found for each state
+        
+        // Start with each possible move as initial nodes
+        for (int move : possibleMoves) {
+            int[] nextPos = simulateMove(currentPositions, move);
+            double hCost = calculateHeuristic(nextPos);
+            AStarNode node = new AStarNode(nextPos, currentTurn + 1, 1, hCost, move, null);
+            openSet.add(node);
+            gScores.put(node.stateKey(), 1);
+        }
+        
+        // A* search
+        while (!openSet.isEmpty()) {
+            AStarNode current = openSet.poll();
+            
+            String stateKey = current.stateKey();
+            
+            // Skip if we've found a better path to this state
+            if (gScores.containsKey(stateKey) && gScores.get(stateKey) < current.gCost) {
+                continue;
+            }
+            
+            // Check if we've reached the goal
+            if (isWinningState(current.positions)) {
+                // Return the first solution found (A* guarantees optimality)
+                return getFirstMove(current);
+            }
+            
+            // Check if we've exceeded the dice sequence or depth limit
+            if (current.turn >= loader.diceSequence.size() || current.gCost > 25) {
+                continue;
+            }
+            
+            // Get next dice roll from sequence
+            int nextDice = loader.diceSequence.get(current.turn);
+            
+            // Generate successor states
+            List<Integer> nextMoves = getSimulatedMoves(nextDice, current.positions);
+            for (int move : nextMoves) {
+                int[] nextPos = simulateMove(current.positions, move);
+                int newGCost = current.gCost + 1;
+                String nextKey = Arrays.toString(nextPos) + ":" + (current.turn + 1);
+                
+                // Only add if we haven't found a better path to this state
+                if (!gScores.containsKey(nextKey) || gScores.get(nextKey) > newGCost) {
+                    double hCost = calculateHeuristic(nextPos);
+                    AStarNode successor = new AStarNode(
+                        nextPos, 
+                        current.turn + 1, 
+                        newGCost, 
+                        hCost, 
+                        move, 
+                        current
+                    );
+                    openSet.add(successor);
+                    gScores.put(nextKey, newGCost);
                 }
             }
         }
+        
+        // If no winning path found, return the first possible move
+        return possibleMoves.isEmpty() ? -1 : possibleMoves.get(0);
     }
 
     /**
-     * Uses Expectimax search to choose the best move.
-     * Root node: We choose the move with the highest expected value.
+     * Traces back the path to find the first move from the initial state.
      */
-    public int chooseMove(List<Integer> possibleMoves, int[] currentPositions) {
-        int bestMove = -1;
-        double maxVal = Double.NEGATIVE_INFINITY;
-
-        for (int move : possibleMoves) {
-            int[] nextPos = simulateMove(currentPositions, move);
-            // After our move, it's a "Chance" node (Dice roll)
-            double val = expectNode(nextPos, SEARCH_DEPTH);
-            if (val > maxVal) {
-                maxVal = val;
-                bestMove = move;
+    private int getFirstMove(AStarNode node) {
+        while (node.parent != null) {
+            if (node.parent.parent == null) {
+                // This is the first move after the initial state
+                return node.moveFromParent;
             }
+            node = node.parent;
         }
-        return bestMove;
+        return node.moveFromParent;
     }
-
+    
     /**
-     * Chance Node: Calculates the average value over all possible dice rolls (1-6).
+     * Calculates the Chebyshev distance heuristic for the target piece to reach (0,0).
+     * Chebyshev distance = max(|x1 - x2|, |y1 - y2|)
      */
-    private double expectNode(int[] positions, int depth) {
-        if (depth == 0 || isGameOver(positions)) {
-            return evaluate(positions);
+    private double calculateHeuristic(int[] positions) {
+        int targetIdx = targetPiece - 1;
+        int targetPos = positions[targetIdx];
+        
+        // If target is captured, it's a losing state
+        if (targetPos == -1) {
+            return 10000.0;
         }
-
-        double sum = 0;
-        // Average over all 6 possible dice outcomes
-        for (int dice = 1; dice <= 6; dice++) {
-            sum += maxNode(positions, dice, depth - 1);
+        
+        // If target is at goal, winning state
+        if (targetPos == GOAL_POS) {
+            return 0.0;
         }
-        return sum / 6.0;
+        
+        // Calculate Chebyshev distance
+        int row = targetPos / 10;
+        int col = targetPos % 10;
+        int goalRow = GOAL_POS / 10;
+        int goalCol = GOAL_POS % 10;
+        
+        return Math.max(Math.abs(row - goalRow), Math.abs(col - goalCol));
     }
-
+    
     /**
-     * Max Node: Simulates the AI choosing the best move for a specific dice roll.
+     * Generates all possible moves for a given dice roll and position state.
+     * This replicates GameState.generatePossibleMoves logic.
      */
-    private double maxNode(int[] positions, int dice, int depth) {
-        if (depth == 0 || isGameOver(positions)) {
-            return evaluate(positions);
-        }
-
-        List<Integer> moves = generatePossibleMoves(dice, positions);
-        if (moves.isEmpty()) {
-            // No moves possible (pass), just evaluate current state
-            return evaluate(positions);
-        }
-
-        double maxVal = Double.NEGATIVE_INFINITY;
-        for (int move : moves) {
-            int[] nextPos = simulateMove(positions, move);
-            // After this move, it goes back to a Chance node (next turn's dice)
-            // Note: We decrement depth in expectNode, but we can treat (Max->Expect) as one layer
-            double val = expectNode(nextPos, depth - 1);
-            if (val > maxVal) {
-                maxVal = val;
-            }
-        }
-        return maxVal;
-    }
-
-    /**
-     * Replicates the game logic to generate valid moves for a given dice roll.
-     */
-    private List<Integer> generatePossibleMoves(int diceNumber, int[] positions) {
+    public List<Integer> getSimulatedMoves(int diceNumber, int[] currentPositions) {
         List<Integer> possiblePieces = new ArrayList<>();
         int pieceIdx = diceNumber - 1;
 
-        if (positions[pieceIdx] != -1) {
+        // Rule: If the dice piece exists, only it moves
+        if (currentPositions[pieceIdx] != -1) {
             possiblePieces.add(diceNumber);
         } else {
-            // Find next smallest available
+            // Rule: Find smallest bigger and biggest smaller
+            int smaller = -1, bigger = -1;
             for (int i = pieceIdx - 1; i >= 0; i--) {
-                if (positions[i] != -1) { possiblePieces.add(i + 1); break; }
+                if (currentPositions[i] != -1) { smaller = i + 1; break; }
             }
-            // Find next biggest available
             for (int i = pieceIdx + 1; i < 6; i++) {
-                if (positions[i] != -1) { possiblePieces.add(i + 1); break; }
+                if (currentPositions[i] != -1) { bigger = i + 1; break; }
             }
+            if (smaller != -1) possiblePieces.add(smaller);
+            if (bigger != -1) possiblePieces.add(bigger);
         }
 
         List<Integer> moves = new ArrayList<>();
@@ -136,7 +189,7 @@ public class AIPlayer {
         int[] dc = {-1, 0, 1, -1, 1, -1, 0, 1};
 
         for (int pNum : possiblePieces) {
-            int pos = positions[pNum - 1];
+            int pos = currentPositions[pNum - 1];
             int r = pos / 10;
             int c = pos % 10;
 
@@ -172,38 +225,7 @@ public class AIPlayer {
         return newPos;
     }
 
-    private boolean isGameOver(int[] positions) {
-        return positions[targetPiece - 1] == GOAL_POS || positions[targetPiece - 1] == -1;
-    }
-
-    /**
-     * Heuristic Evaluation Function.
-     * Higher score = Better state.
-     */
-    private double evaluate(int[] positions) {
-        int targetIdx = targetPiece - 1;
-        int targetPos = positions[targetIdx];
-
-        // 1. Win/Loss Condition
-        if (targetPos == GOAL_POS) return 100000.0;
-        if (targetPos == -1) return -100000.0; // Target captured -> LOSS
-
-        // 2. Distance Heuristic
-        // Use precomputed BFS distance (accounts for obstacle 22)
-        int dist = distanceMap[targetPos];
-        // If dist is -1 (unreachable), massive penalty
-        if (dist == -1) return -90000.0;
-
-        double score = -dist * 100.0; 
-
-        // 3. Mobility Bonus
-        // Slightly prefer states where we have more pieces alive (more options)
-        int pieceCount = 0;
-        for (int p : positions) {
-            if (p != -1) pieceCount++;
-        }
-        score += pieceCount * 5.0;
-
-        return score;
+    private boolean isWinningState(int[] positions) {
+        return positions[targetPiece - 1] == GOAL_POS;
     }
 }
