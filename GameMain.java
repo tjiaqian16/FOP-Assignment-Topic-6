@@ -35,6 +35,12 @@ public class GameMain {
         PrintWriter writer = new PrintWriter(new FileWriter("moves.txt"));
         loader.printGameDetails(playerName, writer);
 
+        // Initialize AI player outside loop if needed
+        AIPlayer ai = null;
+        if (mode == 3) {
+            ai = new AIPlayer(game.targetPiece, loader);
+        }
+
         boolean won = false;
         // Game loop: Max 30 moves [cite: 58, 102]
         for (int turn = 0; turn < 30 && turn < loader.diceSequence.size(); turn++) {
@@ -53,8 +59,7 @@ public class GameMain {
                 RandomPlayer rp = new RandomPlayer();
                 chosenMove = rp.chooseMove(moves);
             } else if (mode == 3) {
-                AIPlayer ai = new AIPlayer(game.targetPiece);
-                chosenMove = ai.chooseMove(moves, currentPositions);
+                chosenMove = ai.chooseMove(moves, currentPositions, turn);
             }
 
             // 5. Execute move logic [cite: 53, 54]
