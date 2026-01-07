@@ -70,7 +70,7 @@ public class AIPlayer {
         bestCosts.put(stateKey(currentPositions, currentTurn), 0);
         
         SearchNode goalNode = null;
-        int maxDepth = Math.max(1, Math.min(MAX_SEARCH_DEPTH, loader.diceSequence.size()) - currentTurn); // Don't exceed dice sequence
+        int maxDepth = Math.max(1, Math.min(MAX_SEARCH_DEPTH, loader.diceSequence.size() - currentTurn)); // Don't exceed dice sequence
         
         while (!openSet.isEmpty()) {
             SearchNode current = openSet.poll();
@@ -123,6 +123,10 @@ public class AIPlayer {
         }
         
         // If no path to goal found, use greedy heuristic: pick move that minimizes heuristic
+        if (possibleMoves.isEmpty()) {
+            return -1; // Should not happen in practice
+        }
+        
         int bestMove = possibleMoves.get(0);
         int bestHeuristic = Integer.MAX_VALUE;
         
@@ -140,9 +144,11 @@ public class AIPlayer {
     
     /**
      * Creates a unique key for a game state (positions + turn)
+     * Uses hashCode for efficient key generation
      */
     private String stateKey(int[] positions, int turn) {
-        return Arrays.toString(positions) + ":" + turn;
+        // Combine position array hash with turn for efficient key
+        return Arrays.hashCode(positions) + ":" + turn;
     }
 
     /**
