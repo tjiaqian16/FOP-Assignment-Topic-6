@@ -5,7 +5,10 @@ public class AIPlayer {
     private int[] distanceMap; // Precomputed BFS distances to goal
     private static final int GOAL_POS = 0;
     private static final int OBSTACLE_POS = 22;
-    private static final int SEARCH_DEPTH = 3; // Lookahead depth (Me -> Dice -> Me -> Dice -> Eval)
+    // Depth 7 allows the AI to look ahead approx. 4 turns. 
+    // This is necessary to spot "sacrifice" opportunities in Level 4 
+    // while remaining efficient enough for the <15s constraint.
+    private static final int SEARCH_DEPTH = 7; 
 
     public AIPlayer(int targetPiece) {
         this.targetPiece = targetPiece;
@@ -14,7 +17,7 @@ public class AIPlayer {
 
     /**
      * Initializes a lookup table for the shortest path distance from every square to the goal (0),
-     * accounting for the obstacle at 22.
+     * dynamically accounting for the obstacle at 22 using BFS.
      */
     private void initDistanceMap() {
         distanceMap = new int[100];
@@ -25,6 +28,7 @@ public class AIPlayer {
         distanceMap[GOAL_POS] = 0;
         queue.add(GOAL_POS);
         
+        // All 8 directions allowed
         int[] dr = {-1, -1, -1, 0, 0, 1, 1, 1};
         int[] dc = {-1, 0, 1, -1, 1, -1, 0, 1};
 
@@ -50,7 +54,7 @@ public class AIPlayer {
 
     /**
      * Uses Expectimax search to choose the best move.
-     * Root node: We choose the move with the highest expected value.
+     * This is the entry point called by the Game Loop.
      */
     public int chooseMove(List<Integer> possibleMoves, int[] currentPositions) {
         int bestMove = -1;
@@ -70,6 +74,7 @@ public class AIPlayer {
 
     /**
      * Chance Node: Calculates the average value over all possible dice rolls (1-6).
+     * This handles the stochastic nature of the dice.
      */
     private double expectNode(int[] positions, int depth) {
         if (depth == 0 || isGameOver(positions)) {
@@ -101,8 +106,7 @@ public class AIPlayer {
         double maxVal = Double.NEGATIVE_INFINITY;
         for (int move : moves) {
             int[] nextPos = simulateMove(positions, move);
-            // After this move, it goes back to a Chance node (next turn's dice)
-            // Note: We decrement depth in expectNode, but we can treat (Max->Expect) as one layer
+            // Recursively call expectNode (next layer)
             double val = expectNode(nextPos, depth - 1);
             if (val > maxVal) {
                 maxVal = val;
@@ -113,6 +117,7 @@ public class AIPlayer {
 
     /**
      * Replicates the game logic to generate valid moves for a given dice roll.
+     * This allows the AI to simulate future states internally.
      */
     private List<Integer> generatePossibleMoves(int diceNumber, int[] positions) {
         List<Integer> possiblePieces = new ArrayList<>();
@@ -121,11 +126,11 @@ public class AIPlayer {
         if (positions[pieceIdx] != -1) {
             possiblePieces.add(diceNumber);
         } else {
-            // Find next smallest available
+            // Rule: If dice piece is missing, find next smallest available
             for (int i = pieceIdx - 1; i >= 0; i--) {
                 if (positions[i] != -1) { possiblePieces.add(i + 1); break; }
             }
-            // Find next biggest available
+            // Rule: Find next biggest available
             for (int i = pieceIdx + 1; i < 6; i++) {
                 if (positions[i] != -1) { possiblePieces.add(i + 1); break; }
             }
@@ -146,7 +151,7 @@ public class AIPlayer {
                 if (nr >= 0 && nr < 10 && nc >= 0 && nc < 10) {
                     int nPos = nr * 10 + nc;
                     if (nPos != OBSTACLE_POS) {
-                        moves.add(pNum * 100 + nPos);
+                        moves.add(pNum * 100 + nPos); // Format: PieceID + Destination
                     }
                 }
             }
@@ -162,7 +167,7 @@ public class AIPlayer {
         int pieceIdx = (move / 100) - 1;
         int dest = move % 100;
 
-        // Capture logic: If any piece is at destination, remove it
+        // Capture logic: If any piece is at destination, remove it (set to -1)
         for (int i = 0; i < 6; i++) {
             if (newPos[i] == dest) {
                 newPos[i] = -1; 
@@ -191,19 +196,13 @@ public class AIPlayer {
         // 2. Distance Heuristic
         // Use precomputed BFS distance (accounts for obstacle 22)
         int dist = distanceMap[targetPos];
+        
         // If dist is -1 (unreachable), massive penalty
         if (dist == -1) return -90000.0;
 
-        double score = -dist * 100.0; 
-
-        // 3. Mobility Bonus
-        // Slightly prefer states where we have more pieces alive (more options)
-        int pieceCount = 0;
-        for (int p : positions) {
-            if (p != -1) pieceCount++;
-        }
-        score += pieceCount * 5.0;
-
-        return score;
+        // Score is purely based on closing distance to goal.
+        // NOTE: We deliberately do NOT reward keeping other pieces alive.
+        // This encourages the AI to sacrifice pieces if it helps the Target move via the "Next Available" rule.
+        return -dist * 100.0; 
     }
 }
