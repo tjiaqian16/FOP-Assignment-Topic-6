@@ -19,19 +19,17 @@ public class MainInterface extends JFrame {
     public MainInterface() {
         setTitle("Einstein Würfelt Nicht");
         
-        // 1. Set Window Size based on Background Image
+        // 1. Set Window Size
         try {
             BufferedImage bgImage = ImageIO.read(new File("menu_bg.jpg"));
             setSize(bgImage.getWidth(), bgImage.getHeight());
         } catch (Exception e) {
             System.out.println("Could not read background image for sizing. Using default.");
-            setSize(1000, 700); // Fallback size
+            setSize(1000, 700); 
         }
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null); // Center window
-        
-        // 2. Allow Maximizing/Resizing
         setResizable(true); 
 
         // Layout Manager
@@ -39,14 +37,16 @@ public class MainInterface extends JFrame {
         mainContainer = new JPanel(cardLayout);
 
         // --- Initialize Pages ---
+        LoadingPage loadingPage = new LoadingPage(); // NEW: Create Loading Page
         HomePage home = new HomePage(this);
         PlaySelectionPage playSelection = new PlaySelectionPage(this);
-        setupPage = new SetupPage(this);
+        SetupPage setupPage = new SetupPage(this);
         LeaderboardPage leaderboard = new LeaderboardPage(this);
         gamePanel = new GamePanel(this);
         settingsPage = new SettingsPage(this);
 
         // --- Add Pages to Layout ---
+        mainContainer.add(loadingPage, "LOADING"); // NEW: Add it to container
         mainContainer.add(home, "HOME");
         mainContainer.add(playSelection, "PLAY_SELECTION");
         mainContainer.add(setupPage, "SETUP");
@@ -55,7 +55,15 @@ public class MainInterface extends JFrame {
         mainContainer.add(settingsPage, "SETTINGS");
 
         add(mainContainer);
+        
+        // 2. Show Loading Page First
+        cardLayout.show(mainContainer, "LOADING");
         setVisible(true);
+
+        // 3. Timer to switch to HOME after 3 seconds (3000 ms)
+        Timer timer = new Timer(3000, e -> showView("HOME"));
+        timer.setRepeats(false); // Only run once
+        timer.start();
     }
 
     // Switch Screens
@@ -82,3 +90,4 @@ public class MainInterface extends JFrame {
         SwingUtilities.invokeLater(MainInterface::new);
     }
 }
+   
