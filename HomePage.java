@@ -8,10 +8,10 @@ public class HomePage extends BackgroundImagePanel {
     public HomePage(MainInterface app) {
         super("menu_bg.jpg"); // Ensure this file exists
         this.mainApp = app;
-        this.soundManager = SoundManager.getInstance();
+        this.soundManager = SoundManager.getInstance(); //
 
         // Start Music
-        soundManager.playMusic("bgm.wav");
+        soundManager.playMusic("bgm.wav"); //
 
         setLayout(new GridBagLayout()); 
 
@@ -37,7 +37,8 @@ public class HomePage extends BackgroundImagePanel {
 
         settingBtn.addActionListener(e -> {
             soundManager.playSound("click.wav");
-            JOptionPane.showMessageDialog(this, "Settings coming soon!");
+            // Navigate to the new Settings Page
+            mainApp.showView("SETTINGS"); 
         });
 
         exitBtn.addActionListener(e -> System.exit(0));
