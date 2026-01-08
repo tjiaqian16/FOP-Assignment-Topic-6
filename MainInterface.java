@@ -8,6 +8,7 @@ public class MainInterface extends JFrame {
     // Pages
     private GamePanel gamePanel;
     private SetupPage setupPage;
+    private SettingsPage settingsPage; // Added SettingsPage
     
     // Game State
     private int selectedMode = 1; // 1 = Human, 2 = Random, 3 = AI
@@ -29,7 +30,8 @@ public class MainInterface extends JFrame {
         PlaySelectionPage playSelection = new PlaySelectionPage(this);
         setupPage = new SetupPage(this);
         LeaderboardPage leaderboard = new LeaderboardPage(this);
-        gamePanel = new GamePanel(this); 
+        gamePanel = new GamePanel(this);
+        settingsPage = new SettingsPage(this); // Initialize SettingsPage
 
         // --- Add Pages to Layout ---
         mainContainer.add(home, "HOME");
@@ -37,6 +39,7 @@ public class MainInterface extends JFrame {
         mainContainer.add(setupPage, "SETUP");
         mainContainer.add(leaderboard, "LEADERBOARD");
         mainContainer.add(gamePanel, "GAME");
+        mainContainer.add(settingsPage, "SETTINGS"); // Add to CardLayout
 
         add(mainContainer);
         setVisible(true);
