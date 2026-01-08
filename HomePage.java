@@ -2,6 +2,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.File;
+import javax.imageio.ImageIO;
 
 public class HomePage extends BackgroundImagePanel {
     private MainInterface mainApp;
@@ -18,17 +20,33 @@ public class HomePage extends BackgroundImagePanel {
         setLayout(new GridBagLayout()); 
 
         // --- 1. Title Section (Left Side) ---
-        // Using HTML to wrap the long text "Einstein Würfelt Nicht" into three big lines
-        JLabel titleLabel = new JLabel("<html><div style='text-align: center;'>Einstein<br>Würfelt<br>Nicht</div></html>");
-        titleLabel.setFont(new Font("Serif", Font.BOLD, 85)); // Increased Font Size
-        titleLabel.setForeground(Color.WHITE);
+        // UPDATED: Now uses an image instead of text
+        JLabel titleLabel = new JLabel();
+        try {
+            // Load the image "title.png". Ensure this file exists in your project folder!
+            ImageIcon titleIcon = new ImageIcon(ImageIO.read(new File("title.png")));
+            
+            // Optional: Scale image if it's too big (Example: limit width to 500)
+            int targetWidth = 500;
+            if (titleIcon.getIconWidth() > targetWidth) {
+                int newHeight = (targetWidth * titleIcon.getIconHeight()) / titleIcon.getIconWidth();
+                Image scaledImg = titleIcon.getImage().getScaledInstance(targetWidth, newHeight, Image.SCALE_SMOOTH);
+                titleIcon = new ImageIcon(scaledImg);
+            }
+            
+            titleLabel.setIcon(titleIcon);
+        } catch (Exception e) {
+            // Fallback if image is missing
+            titleLabel.setText("<html><h1 style='color:white;'>Title Image<br>Not Found</h1></html>");
+            System.out.println("Could not find 'title.png'. Please add the file.");
+        }
         titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
         // --- 2. Button Section (Right Side) ---
-        JPanel buttonPanel = new JPanel(new GridLayout(4, 1, 0, 25)); // Increased gap to 25
+        JPanel buttonPanel = new JPanel(new GridLayout(4, 1, 0, 25)); 
         buttonPanel.setOpaque(false); 
 
-        // Create buttons with "Pill" style, using ORIGINAL names
+        // Create buttons
         JButton playBtn = createRoundedButton("Play");
         JButton leaderboardBtn = createRoundedButton("Leaderboard");
         JButton settingBtn = createRoundedButton("Setting");
@@ -64,21 +82,21 @@ public class HomePage extends BackgroundImagePanel {
         // Constraint for Left Side (Title)
         gbc.gridx = 0;
         gbc.gridy = 0;
-        gbc.weightx = 0.55; 
+        gbc.weightx = 0.5; 
         gbc.weighty = 1.0;
-        gbc.fill = GridBagConstraints.BOTH;
-        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.anchor = GridBagConstraints.EAST; // Push title to the center line
+        gbc.insets = new Insets(0, 0, 0, 30); // Gap between title and center
         
-        JPanel titleWrapper = new JPanel(new GridBagLayout());
-        titleWrapper.setOpaque(false);
-        titleWrapper.add(titleLabel);
-        add(titleWrapper, gbc);
+        add(titleLabel, gbc);
 
         // Constraint for Right Side (Buttons)
         gbc.gridx = 1;
-        gbc.weightx = 0.45; 
+        gbc.weightx = 0.5; 
         gbc.fill = GridBagConstraints.NONE; 
-        gbc.anchor = GridBagConstraints.CENTER; 
+        gbc.anchor = GridBagConstraints.WEST; // Push buttons to the center line
+        gbc.insets = new Insets(0, 30, 0, 0); // Gap between buttons and center
+        
         add(buttonPanel, gbc);
     }
 
@@ -87,20 +105,20 @@ public class HomePage extends BackgroundImagePanel {
      */
     private JButton createRoundedButton(String text) {
         RoundedButton btn = new RoundedButton(text);
-        // Made buttons BIGGER (300 width, 75 height)
         btn.setPreferredSize(new Dimension(300, 75)); 
-        // Increased Font Size to 30
         btn.setFont(new Font("SansSerif", Font.BOLD, 30));
         return btn;
     }
 
     /**
-     * Custom Button Class (Orange Pill Shape)
+     * Custom Button Class
      */
     private static class RoundedButton extends JButton {
-        private Color normalColor = new Color(255, 180, 80); 
-        private Color hoverColor = new Color(255, 200, 100); 
-        private Color pressedColor = new Color(220, 140, 50); 
+        // UPDATED COLORS: Deep Teal/Blue to contrast nicely with Orange
+        private Color normalColor = new Color(0, 105, 120); // Deep Teal
+        private Color hoverColor = new Color(0, 150, 170);   // Lighter Teal
+        private Color pressedColor = new Color(0, 70, 80);   // Darker Teal
+        
         private boolean isHovered = false;
         private boolean isPressed = false;
 
@@ -130,8 +148,7 @@ public class HomePage extends BackgroundImagePanel {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
             // Draw Shadow
-            g2.setColor(new Color(200, 120, 40)); 
-            // 40 is the corner radius (increased for bigger buttons)
+            g2.setColor(new Color(0, 50, 60, 150)); // Semi-transparent dark shadow
             g2.fillRoundRect(0, 8, getWidth(), getHeight() - 8, 40, 40);
 
             // Choose color
