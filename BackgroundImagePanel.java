@@ -1,25 +1,36 @@
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
+import java.net.URL;
 import javax.imageio.ImageIO;
 import java.io.IOException;
 
 public class BackgroundImagePanel extends JPanel {
     private Image backgroundImage;
 
-    public BackgroundImagePanel(String filePath) {
+    public BackgroundImagePanel(String fileName) {
         try {
-            // Load the image from the file
-            backgroundImage = ImageIO.read(new File(filePath));
+            // UPDATED: Use getResource to load from Classpath (works in JARs)
+            URL imgUrl = getClass().getResource("/" + fileName);
+            if (imgUrl != null) {
+                backgroundImage = ImageIO.read(imgUrl);
+            } else {
+                // Fallback: try loading from file system if resource is null
+                // (Useful if running directly from src folder in some IDEs)
+                java.io.File f = new java.io.File(fileName);
+                if (f.exists()) {
+                     backgroundImage = ImageIO.read(f);
+                } else {
+                     System.out.println("Image not found: " + fileName);
+                }
+            }
         } catch (IOException e) {
-            System.out.println("Background image not found: " + filePath);
+            e.printStackTrace();
         }
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        // Draw the image scaled to fit the entire panel
         if (backgroundImage != null) {
             g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
         }
