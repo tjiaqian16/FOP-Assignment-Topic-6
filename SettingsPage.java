@@ -2,6 +2,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.File;
+import javax.imageio.ImageIO;
 
 public class SettingsPage extends BackgroundImagePanel {
     private MainInterface mainApp;
@@ -46,10 +48,28 @@ public class SettingsPage extends BackgroundImagePanel {
         gbc.gridx = 0; gbc.gridy = 1; contentPanel.add(soundLabel, gbc);
         gbc.gridx = 1; contentPanel.add(soundSwitch, gbc);
 
-        // --- Back Button ---
-        JButton backBtn = new JButton("Back");
-        backBtn.setPreferredSize(new Dimension(150, 40));
-        backBtn.setFont(new Font("SansSerif", Font.BOLD, 18));
+        // --- Back Button (Image) ---
+        JButton backBtn = new JButton();
+        try {
+            File imgFile = new File("back_icon.png");
+            if (imgFile.exists()) {
+                ImageIcon icon = new ImageIcon(ImageIO.read(imgFile));
+                Image scaled = icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+                backBtn.setIcon(new ImageIcon(scaled));
+                backBtn.setBorderPainted(false);
+                backBtn.setContentAreaFilled(false);
+                backBtn.setFocusPainted(false);
+                // Remove size preference if using icon to let it auto-size or set manually
+                backBtn.setPreferredSize(new Dimension(60, 60)); 
+            } else {
+                backBtn.setText("Back");
+                backBtn.setPreferredSize(new Dimension(150, 40));
+                backBtn.setFont(new Font("SansSerif", Font.BOLD, 18));
+            }
+        } catch (Exception e) {
+            backBtn.setText("Back");
+        }
+
         backBtn.addActionListener(e -> {
             soundManager.playSound("click.wav");
             mainApp.showView("HOME");
@@ -69,18 +89,14 @@ public class SettingsPage extends BackgroundImagePanel {
         JLabel label = new JLabel(text);
         label.setFont(new Font("SansSerif", Font.BOLD, 24));
         label.setForeground(Color.WHITE);
-        // Add a slight shadow/outline effect for readability
         label.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 20)); 
         return label;
     }
 
-    /**
-     * Custom Toggle Switch Component (Inner Class)
-     */
     private static class ToggleSwitch extends JPanel {
         private boolean isOn;
-        private Color switchOnColor = new Color(46, 204, 113); // Green
-        private Color switchOffColor = new Color(189, 195, 199); // Gray
+        private Color switchOnColor = new Color(46, 204, 113); 
+        private Color switchOffColor = new Color(189, 195, 199); 
         private Color buttonColor = Color.WHITE;
         private SwitchListener listener;
 
@@ -118,16 +134,14 @@ public class SettingsPage extends BackgroundImagePanel {
 
             int w = getWidth();
             int h = getHeight();
-            int pad = 4; // Padding between circle and edge
+            int pad = 4;
 
-            // Draw Background (Rounded Rectangle)
             g2.setColor(isOn ? switchOnColor : switchOffColor);
-            g2.fillRoundRect(0, 0, w, h, h, h); // h is the corner radius for full roundness
+            g2.fillRoundRect(0, 0, w, h, h, h);
 
-            // Draw Switch Button (Circle)
             g2.setColor(buttonColor);
             int circleSize = h - (pad * 2);
-            int x = isOn ? (w - circleSize - pad) : pad; // Slide position
+            int x = isOn ? (w - circleSize - pad) : pad;
             g2.fillOval(x, pad, circleSize, circleSize);
         }
     }
