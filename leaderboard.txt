@@ -7,3 +7,5 @@ AIPlayer,4,Won
 RandomPlayer,2,Lost
 Pris,2,Lost
 AIPlayer,2,Won
+jia qian,1,Lost
+p,1,Lost

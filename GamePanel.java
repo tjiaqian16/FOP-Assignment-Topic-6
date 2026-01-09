@@ -1,80 +1,130 @@
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.*;
 import java.util.List;
 import java.io.File;
+import javax.imageio.ImageIO;
 
-public class GamePanel extends JPanel {
+public class GamePanel extends BackgroundImagePanel {
     private MainInterface mainApp;
+    
+    // --- Components ---
     private JPanel boardPanel;
-    private JLabel statusLabel, infoLabel;
-    private JButton nextTurnButton, quitButton;
+    private JLabel statusLabel;
+    private JLabel infoLabel;
+    private JButton nextTurnButton;
+    private JButton settingsButton;
     private JButton[] gridButtons;
     
-    // Logic
+    // --- Game Logic ---
     private GameState gameState;
     private GameLoader loader;
     private int[] currentPositions;
     private int currentTurn = 0;
     private int targetPiece;
 
-    // Player Info
+    // --- State Info ---
     private String currentPlayerName;
     private int currentLevel;
     private boolean gameEnded = false;
+    private boolean isHumanTurn = false;
 
-    // --- PLAYER LOGIC CONNECTORS ---
+    // --- Players ---
     private HumanPlayer humanPlayer;   
     private RandomPlayer randomPlayer; 
     private AIPlayer aiPlayer;         
     
-    private boolean isHumanTurn = false;
-
     private static final int BOARD_SIZE = 10;
 
     public GamePanel(MainInterface app) {
+        // Use the desk background for a nice game atmosphere
+        super("setup_bg.jpg");
         this.mainApp = app;
         
-        // Initialize Player Helpers
+        // Initialize logic helpers
         this.humanPlayer = new HumanPlayer();
         this.randomPlayer = new RandomPlayer(); 
         
-        setLayout(new BorderLayout(10, 10));
+        setLayout(new BorderLayout());
 
-        // --- Top Control Panel ---
-        JPanel controlPanel = new JPanel(new BorderLayout());
+        // ============================
+        // 1. TOP HEADER (Status + Settings)
+        // ============================
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(new EmptyBorder(15, 25, 0, 25));
+
+        // Status Label (Top Left)
+        statusLabel = new JLabel("Initializing...");
+        statusLabel.setFont(new Font("SansSerif", Font.BOLD, 22));
+        statusLabel.setForeground(new Color(20, 20, 20)); 
+        statusLabel.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 0));
+
+        // Settings Button (Top Right) - Image Only
+        settingsButton = new JButton(); // No text initially
+        settingsButton.setPreferredSize(new Dimension(60, 60));
+        settingsButton.setFocusPainted(false);
+        settingsButton.setContentAreaFilled(false);
+        settingsButton.setBorderPainted(false);
+        settingsButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        settingsButton.setToolTipText("Settings");
         
-        quitButton = new JButton("Quit");
-        quitButton.addActionListener(e -> {
-            SoundManager.getInstance().playSound("click.wav");
-            mainApp.showView("HOME");
-        });
+        // Try to load 'settings_icon.png'
+        try {
+            File imgFile = new File("settings_icon.png"); 
+            if (imgFile.exists()) {
+                ImageIcon icon = new ImageIcon(ImageIO.read(imgFile));
+                // Scale if too big
+                if (icon.getIconWidth() > 50) {
+                    Image scaled = icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+                    icon = new ImageIcon(scaled);
+                }
+                settingsButton.setIcon(icon);
+            } else {
+                // Fallback if image missing: A simple unicode gear
+                settingsButton.setText("⚙");
+                settingsButton.setFont(new Font("SansSerif", Font.PLAIN, 40));
+                settingsButton.setForeground(new Color(50, 50, 50));
+            }
+        } catch (Exception e) {
+            settingsButton.setText("⚙");
+        }
+
+        settingsButton.addActionListener(e -> showSettingsDialog());
+
+        headerPanel.add(statusLabel, BorderLayout.WEST);
+        headerPanel.add(settingsButton, BorderLayout.EAST);
         
-        JPanel centerControls = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        statusLabel = new JLabel("Waiting...");
-        statusLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        
-        nextTurnButton = new JButton("Next Turn");
-        nextTurnButton.addActionListener(e -> playNextTurn());
+        add(headerPanel, BorderLayout.NORTH);
 
-        centerControls.add(statusLabel);
-        centerControls.add(nextTurnButton);
-        controlPanel.add(quitButton, BorderLayout.WEST);
-        controlPanel.add(centerControls, BorderLayout.CENTER);
-        add(controlPanel, BorderLayout.NORTH);
+        // ============================
+        // 2. CENTER AREA (Grid + Button + Label)
+        // ============================
+        JPanel centerWrapper = new JPanel(new GridBagLayout());
+        centerWrapper.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
 
-        // --- Bottom Info Panel ---
-        infoLabel = new JLabel("Game Status");
-        infoLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        add(infoLabel, BorderLayout.SOUTH);
+        // --- A. The Board (Grid) ---
+        JPanel boardContainer = new JPanel(new BorderLayout());
+        boardContainer.setBackground(new Color(255, 255, 255, 180)); // Milky translucent white
+        boardContainer.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(139, 69, 19), 3), // Brown border
+                new EmptyBorder(10, 10, 10, 10)
+        ));
 
-        // --- Board Grid ---
-        boardPanel = new JPanel(new GridLayout(BOARD_SIZE, BOARD_SIZE, 2, 2));
+        boardPanel = new JPanel(new GridLayout(BOARD_SIZE, BOARD_SIZE, 3, 3));
+        boardPanel.setOpaque(false); 
+        boardPanel.setPreferredSize(new Dimension(500, 500)); 
+
         gridButtons = new JButton[BOARD_SIZE * BOARD_SIZE];
-
         for (int i = 0; i < gridButtons.length; i++) {
             JButton btn = new JButton();
-            btn.setBackground(Color.LIGHT_GRAY);
-            btn.setEnabled(false);
+            btn.setFocusPainted(false);
+            btn.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
+            btn.setBackground(new Color(245, 245, 245));
+            btn.setFont(new Font("SansSerif", Font.BOLD, 14));
+            btn.setEnabled(false); // Default disabled
             
             int finalIndex = i;
             btn.addActionListener(e -> handleGridClick(finalIndex)); 
@@ -82,8 +132,51 @@ public class GamePanel extends JPanel {
             gridButtons[i] = btn;
             boardPanel.add(btn);
         }
-        add(boardPanel, BorderLayout.CENTER);
+        boardContainer.add(boardPanel, BorderLayout.CENTER);
+
+        // Add Grid to Center Wrapper (Row 0, Col 0)
+        gbc.gridx = 0; 
+        gbc.gridy = 0;
+        gbc.insets = new Insets(0, 0, 10, 20); // Gap right for the button
+        centerWrapper.add(boardContainer, gbc);
+
+        // --- B. Next Turn Button (Beside Grid) ---
+        nextTurnButton = new RoundedButton("Start Game");
+        nextTurnButton.setPreferredSize(new Dimension(140, 80)); // Taller button
+        nextTurnButton.addActionListener(e -> playNextTurn());
+
+        // Add Button to Center Wrapper (Row 0, Col 1)
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.CENTER; 
+        gbc.insets = new Insets(0, 0, 0, 0);
+        centerWrapper.add(nextTurnButton, gbc);
+
+        // --- C. Info Label (Below Grid) ---
+        infoLabel = new JLabel("Welcome! Press Next Turn to start.");
+        infoLabel.setFont(new Font("SansSerif", Font.BOLD | Font.ITALIC, 18));
+        infoLabel.setForeground(new Color(20, 20, 20));
+        infoLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        
+        // Background for readability
+        infoLabel.setOpaque(true);
+        infoLabel.setBackground(new Color(255, 255, 255, 150));
+        infoLabel.setBorder(new EmptyBorder(5, 15, 5, 15));
+
+        // Add Label to Center Wrapper (Row 1, Col 0 - aligning with Grid)
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.gridwidth = 1; // Match grid width
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(5, 0, 0, 20); // Top gap, Right gap to match grid
+        centerWrapper.add(infoLabel, gbc);
+
+        add(centerWrapper, BorderLayout.CENTER);
     }
+
+    // ============================
+    // LOGIC METHODS
+    // ============================
 
     public void startLevel(int levelNum, String playerName) {
         try {
@@ -105,9 +198,12 @@ public class GamePanel extends JPanel {
             this.gameEnded = false;
             this.isHumanTurn = false;
 
-            statusLabel.setText(playerName + " | Level " + levelNum + " | Target: " + targetPiece);
-            infoLabel.setText("Click 'Next Turn' to start!");
+            statusLabel.setText(playerName + " - Level " + levelNum);
+            infoLabel.setText("Goal: Move P" + targetPiece + " to Square 0!");
+            
+            nextTurnButton.setText("Next Turn");
             nextTurnButton.setEnabled(true);
+            
             updateBoard();
 
         } catch (Exception e) {
@@ -129,7 +225,7 @@ public class GamePanel extends JPanel {
         List<Integer> moves = gameState.generatePossibleMoves(dice, currentPositions);
 
         if (moves.isEmpty()) {
-            infoLabel.setText("Turn " + (currentTurn + 1) + " | Dice: " + dice + " | No moves possible.");
+            infoLabel.setText("Turn " + (currentTurn + 1) + " (Dice " + dice + "): No moves possible.");
             currentTurn++;
             updateBoard();
             return;
@@ -137,81 +233,66 @@ public class GamePanel extends JPanel {
 
         int mode = mainApp.getGameMode();
 
-        // --- MODE 1: HUMAN PLAYER ---
+        // 1. HUMAN TURN
         if (mode == 1) { 
             startHumanTurn(dice, moves);
             return; 
         } 
         
-        // --- MODE 2 & 3: COMPUTER (AI/RANDOM) ---
-        int chosenMove = -1;
+        // 2. COMPUTER TURN
         String playerName = (mode == 2) ? "Random Player" : "AI";
+        int chosenMove = (mode == 2) 
+            ? randomPlayer.chooseMove(moves) 
+            : new AIPlayer(gameState.targetPiece).chooseMove(moves, currentPositions);
 
-        if (mode == 2) {
-            chosenMove = randomPlayer.chooseMove(moves);
-        } else {
-            aiPlayer = new AIPlayer(gameState.targetPiece);
-            chosenMove = aiPlayer.chooseMove(moves, currentPositions);
-        }
-
-        // --- VISUALIZATION STEP (SHOW THE MOVE) ---
         if (chosenMove != -1) {
             int pieceId = chosenMove / 100;
             int destination = chosenMove % 100;
             int currentPos = currentPositions[pieceId - 1];
 
-            // 1. Highlight the Piece and Destination BEFORE moving
             highlightComputerMove(currentPos, destination);
-            infoLabel.setText(playerName + " (Dice " + dice + ") is moving P" + pieceId + "...");
-            
-            // Disable button so user can't click while animation plays
+            infoLabel.setText(playerName + " (Dice " + dice + ") moves P" + pieceId + "...");
             nextTurnButton.setEnabled(false); 
 
-            // 2. Create a Timer to delay the actual move 
-            // CHANGED: Delay increased to 2500ms (2.5 seconds)
-            Timer animationTimer = new Timer(2500, e -> {
+            Timer animationTimer = new Timer(1500, e -> {
                 executeMove(pieceId, destination);
                 finishTurn();
             });
-            animationTimer.setRepeats(false); // Run only once
+            animationTimer.setRepeats(false);
             animationTimer.start();
         }
     }
 
     private void highlightComputerMove(int start, int end) {
-        // Reset board first to clear old colors
         updateBoard(); 
-        
-        // Highlight Start (Orange)
         if (start >= 0 && start < gridButtons.length) {
-            gridButtons[start].setBackground(new Color(255, 165, 0)); // Orange
+            gridButtons[start].setBackground(new Color(255, 170, 50)); 
         }
-        
-        // Highlight Destination (Green)
         if (end >= 0 && end < gridButtons.length) {
-            gridButtons[end].setBackground(new Color(50, 205, 50)); // Lime Green
+            gridButtons[end].setBackground(new Color(50, 205, 50)); 
         }
     }
 
-    // --- HUMAN PLAYER LOGIC ---
     private void startHumanTurn(int dice, List<Integer> moves) {
         this.isHumanTurn = true;
         humanPlayer.setCurrentMoves(moves);
         
-        infoLabel.setText("Your Turn! Dice: " + dice + ". Select a highlighted Piece.");
+        infoLabel.setText("Your Turn! Dice: " + dice + ". Click a highlighted Piece.");
         nextTurnButton.setEnabled(false);
         highlightValidPieces();
     }
 
     private void highlightValidPieces() {
-        updateBoard();
+        updateBoard(); // Reset visuals
+        
         for (int i = 0; i < currentPositions.length; i++) {
             int pos = currentPositions[i];
             int pieceId = i + 1;
             
             if (pos != -1 && humanPlayer.canPieceMove(pieceId)) {
-                gridButtons[pos].setBackground(new Color(255, 255, 100)); // Yellow
-                gridButtons[pos].setEnabled(true);
+                gridButtons[pos].setEnabled(true); 
+                gridButtons[pos].setBackground(new Color(255, 235, 59)); // Yellow
+                gridButtons[pos].setBorder(BorderFactory.createLineBorder(Color.ORANGE, 2));
             }
         }
     }
@@ -221,24 +302,25 @@ public class GamePanel extends JPanel {
 
         int clickedPieceId = getPieceAt(index);
 
-        // 1. Select Piece
+        // Select Piece
         if (clickedPieceId != -1 && humanPlayer.selectPiece(clickedPieceId)) {
             highlightValidPieces();
-            gridButtons[index].setBackground(new Color(255, 200, 0)); // Orange Selected
+            gridButtons[index].setBackground(new Color(255, 140, 0)); // Dark Orange
             
-            // Show Destinations
+            // Enable Destinations
             for (int r = 0; r < BOARD_SIZE * BOARD_SIZE; r++) {
                 if (humanPlayer.isValidDestination(r)) {
-                    gridButtons[r].setBackground(new Color(100, 255, 100)); // Green
-                    gridButtons[r].setEnabled(true);
+                    gridButtons[r].setEnabled(true); 
+                    gridButtons[r].setBackground(new Color(144, 238, 144)); // Light Green
+                    gridButtons[r].setBorder(BorderFactory.createLineBorder(new Color(34, 139, 34), 2));
                 }
             }
-            infoLabel.setText("Selected P" + clickedPieceId + ". Click a Green Square.");
+            infoLabel.setText("Selected P" + clickedPieceId + ". Now click a Green Square.");
             SoundManager.getInstance().playSound("click.wav");
             return;
         }
 
-        // 2. Move Piece
+        // Move Piece
         if (humanPlayer.isValidDestination(index)) {
             executeMove(humanPlayer.getSelectedPiece(), index);
             isHumanTurn = false;
@@ -246,7 +328,6 @@ public class GamePanel extends JPanel {
         }
     }
 
-    // --- UTILITIES ---
     private int getPieceAt(int index) {
         for (int i = 0; i < currentPositions.length; i++) {
             if (currentPositions[i] == index) return i + 1;
@@ -259,13 +340,10 @@ public class GamePanel extends JPanel {
             if (currentPositions[i] == destination) currentPositions[i] = -1;
         }
         currentPositions[pieceToMove - 1] = destination;
-        infoLabel.setText("Moved P" + pieceToMove + " to " + destination);
     }
 
     private void finishTurn() {
         updateBoard();
-        
-        // Re-enable the button (it might have been disabled by the animation timer)
         nextTurnButton.setEnabled(true);
 
         if (gameState.isWinning(currentPositions)) {
@@ -278,7 +356,6 @@ public class GamePanel extends JPanel {
         }
         currentTurn++;
         
-        // Update label to show next turn is ready
         if (mainApp.getGameMode() == 1) {
              nextTurnButton.setText("Roll Dice");
         } else {
@@ -297,20 +374,130 @@ public class GamePanel extends JPanel {
     private void updateBoard() {
         for (JButton btn : gridButtons) {
             btn.setText("");
-            btn.setBackground(Color.LIGHT_GRAY);
+            btn.setBackground(new Color(245, 245, 245));
+            btn.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
             btn.setEnabled(false);
         }
+        
+        // Goal
+        gridButtons[0].setBorder(BorderFactory.createLineBorder(new Color(255, 215, 0), 2));
+        
+        // Pieces
         for (int i = 0; i < currentPositions.length; i++) {
             int pos = currentPositions[i];
             if (pos != -1) {
                 int index = (pos / 10) * BOARD_SIZE + (pos % 10);
                 if (index >= 0 && index < gridButtons.length) {
-                    gridButtons[index].setText("P" + (i + 1));
-                    gridButtons[index].setFont(new Font("Arial", Font.BOLD, 16));
-                    gridButtons[index].setBackground(i + 1 == targetPiece ? new Color(255, 100, 100) : new Color(100, 200, 255));
+                    JButton btn = gridButtons[index];
+                    btn.setText("P" + (i + 1));
+                    btn.setFont(new Font("SansSerif", Font.BOLD, 16));
+                    
+                    if (i + 1 == targetPiece) {
+                        btn.setBackground(new Color(255, 100, 100)); // Target
+                        btn.setForeground(Color.WHITE);
+                    } else {
+                        btn.setBackground(new Color(70, 130, 180)); // Normal
+                        btn.setForeground(Color.WHITE);
+                    }
                 }
             }
         }
     }
+
+    // ============================
+    // SETTINGS DIALOG
+    // ============================
+    private void showSettingsDialog() {
+        SoundManager.getInstance().playSound("click.wav");
+
+        JDialog dialog = new JDialog(mainApp, "Settings", true);
+        dialog.setUndecorated(true); 
+        dialog.setSize(300, 320);
+        dialog.setLocationRelativeTo(this);
+        
+        JPanel content = new JPanel(new GridLayout(5, 1, 10, 10));
+        content.setBackground(new Color(250, 250, 250));
+        content.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(50, 50, 50), 2),
+            new EmptyBorder(20, 30, 20, 30)
+        ));
+
+        JLabel title = new JLabel("SETTINGS");
+        title.setFont(new Font("SansSerif", Font.BOLD, 22));
+        title.setHorizontalAlignment(SwingConstants.CENTER);
+        content.add(title);
+
+        JCheckBox musicCb = new JCheckBox("Background Music");
+        musicCb.setSelected(SoundManager.getInstance().isMusicEnabled());
+        musicCb.setOpaque(false);
+        musicCb.addActionListener(e -> SoundManager.getInstance().setMusicEnabled(musicCb.isSelected()));
+        content.add(musicCb);
+
+        JCheckBox soundCb = new JCheckBox("Sound Effects");
+        soundCb.setSelected(SoundManager.getInstance().isSoundEnabled());
+        soundCb.setOpaque(false);
+        soundCb.addActionListener(e -> SoundManager.getInstance().setSoundEnabled(soundCb.isSelected()));
+        content.add(soundCb);
+
+        JButton resumeBtn = new RoundedButton("Resume Game");
+        resumeBtn.setBackground(new Color(46, 204, 113)); 
+        resumeBtn.addActionListener(e -> dialog.dispose());
+        content.add(resumeBtn);
+
+        JButton homeBtn = new RoundedButton("Quit to Home");
+        homeBtn.setBackground(new Color(231, 76, 60)); 
+        homeBtn.addActionListener(e -> {
+            SoundManager.getInstance().playSound("click.wav");
+            dialog.dispose();
+            mainApp.showView("HOME");
+        });
+        content.add(homeBtn);
+
+        dialog.add(content);
+        dialog.setVisible(true);
+    }
+
+    // ============================
+    // CUSTOM BUTTON
+    // ============================
+    private static class RoundedButton extends JButton {
+        private Color normalColor = new Color(0, 105, 120);
+        private Color hoverColor = new Color(0, 140, 160);
+        private Color pressedColor = new Color(0, 70, 80);
+        
+        public RoundedButton(String text) {
+            super(text);
+            setContentAreaFilled(false);
+            setFocusPainted(false);
+            setBorderPainted(false);
+            setForeground(Color.WHITE);
+            setFont(new Font("SansSerif", Font.BOLD, 18));
+            setCursor(new Cursor(Cursor.HAND_CURSOR));
+            
+            addMouseListener(new MouseAdapter() {
+                public void mouseEntered(MouseEvent e) { setBackground(hoverColor); repaint(); }
+                public void mouseExited(MouseEvent e) { setBackground(normalColor); repaint(); }
+                public void mousePressed(MouseEvent e) { setBackground(pressedColor); repaint(); }
+                public void mouseReleased(MouseEvent e) { setBackground(hoverColor); repaint(); }
+            });
+        }
+        
+        @Override
+        public void setBackground(Color bg) {
+            this.normalColor = bg;
+            this.hoverColor = bg.brighter();
+            this.pressedColor = bg.darker();
+            super.setBackground(bg);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(normalColor);
+            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
+            super.paintComponent(g2);
+            g2.dispose();
+        }
+    }
 }
-    
