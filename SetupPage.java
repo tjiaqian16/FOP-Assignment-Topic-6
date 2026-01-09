@@ -155,7 +155,11 @@ public class SetupPage extends BackgroundImagePanel {
 
         if (mode == 1) {
             name = nameField.getText().trim();
-            if (!name.matches("^[a-zA-Z0-9]+$")) {
+            if (name.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Name cannot be empty.");
+                return;
+            }
+            if (!name.matches("^[a-zA-Z0-9 ]+$")) {
                 JOptionPane.showMessageDialog(this, "Invalid Name! Alphanumeric only.");
                 return;
             }

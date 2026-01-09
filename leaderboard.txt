@@ -1,2 +1,6 @@
 Priscilia,1,Won
 Priscilia,1,Won
+JiaQian,1,Won
+JiaQian,2,Won
+RandomPlayer,2,Won
+AIPlayer,4,Won

@@ -12,6 +12,7 @@ public class GameMain {
             if (input.hasNextInt()) {
                 mode = input.nextInt();
                 if (mode >= 1 && mode <= 3) {
+                    input.nextLine(); // Clear the newline character from the buffer
                     break; 
                 }
             } else {
@@ -20,17 +21,17 @@ public class GameMain {
             System.out.println("Invalid choice. Please enter 1, 2, or 3.");
         }
         
-        // 2. Prompt for player name based on mode with alphanumeric validation
+        // 2. Prompt for player name based on mode
         String playerName;
         if (mode == 1) {
             while (true) {
-                System.out.print("Enter the name of the human player (letters and digits only): ");
-                playerName = input.next();
-                // Regex ensures only alphanumeric characters are used
-                if (playerName.matches("^[a-zA-Z0-9]+$")) {
+                System.out.print("Enter the name of the human player (letters, digits and spaces only): ");
+                playerName = input.nextLine();
+                // Updated Regex to allow spaces: [a-zA-Z0-9 ]
+                if (playerName.matches("^[a-zA-Z0-9 ]+$")) {
                     break;
                 } else {
-                    System.out.println("Invalid name! Please use only alphabets and digits.");
+                    System.out.println("Invalid name! Please use only alphabets, digits and spaces.");
                 }
             }
         } else if (mode == 2) {
@@ -49,7 +50,7 @@ public class GameMain {
                     break; 
                 }
             } else {
-                input.next(); 
+                input.next(); // Clear the buffer
             }
             System.out.println("Invalid level. Please enter a number between 1 and 4.");
         }
