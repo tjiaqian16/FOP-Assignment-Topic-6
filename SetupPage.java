@@ -1,4 +1,5 @@
 import javax.swing.*;
+import javax.swing.plaf.basic.BasicSliderUI;
 import java.awt.*;
 import java.io.File;
 import javax.imageio.ImageIO;
@@ -53,15 +54,19 @@ public class SetupPage extends BackgroundImagePanel {
         // --- 1. Player Name Input ---
         nameLabel = new JLabel("Enter Player's Name: ");
         nameLabel.setFont(new Font("SansSerif", Font.BOLD, 20));
-        nameLabel.setForeground(Color.WHITE); 
+        // CHANGED: Text color to Black
+        nameLabel.setForeground(Color.BLACK); 
         
         nameField = new JTextField(15);
         nameField.setFont(new Font("SansSerif", Font.PLAIN, 18));
+        // Optional: Add a border to make the white box stand out against the background
+        nameField.setBorder(BorderFactory.createLineBorder(new Color(0, 70, 140), 2));
 
         // --- 2. Level Selection (Slider) ---
         JLabel levelLabel = new JLabel("Select Level:");
         levelLabel.setFont(new Font("SansSerif", Font.BOLD, 20));
-        levelLabel.setForeground(Color.WHITE);
+        // CHANGED: Text color to Black
+        levelLabel.setForeground(Color.BLACK);
 
         levelSlider = new JSlider(JSlider.HORIZONTAL, 1, 4, 1);
         levelSlider.setMajorTickSpacing(1);
@@ -69,9 +74,13 @@ public class SetupPage extends BackgroundImagePanel {
         levelSlider.setPaintLabels(true);
         levelSlider.setSnapToTicks(true);
         levelSlider.setOpaque(false); 
-        levelSlider.setForeground(Color.WHITE);
+        // Style the numbers (labels) to be dark and bold
+        levelSlider.setForeground(new Color(20, 20, 20));
         levelSlider.setFont(new Font("SansSerif", Font.BOLD, 16));
-        levelSlider.setPreferredSize(new Dimension(300, 80));
+        levelSlider.setPreferredSize(new Dimension(350, 80));
+        
+        // CHANGED: Apply the creative custom UI
+        levelSlider.setUI(new CreativeSliderUI(levelSlider));
 
         // --- 3. Start Game Button (Image) ---
         JButton startBtn = new JButton();
@@ -122,7 +131,6 @@ public class SetupPage extends BackgroundImagePanel {
 
         gbc.gridy = 4;
         gbc.insets = new Insets(10, 10, 10, 10);
-        // CHANGED: Only start button remains here
         centerPanel.add(startBtn, gbc);
 
         add(centerPanel, BorderLayout.CENTER);
@@ -159,5 +167,72 @@ public class SetupPage extends BackgroundImagePanel {
 
         int level = levelSlider.getValue();
         mainApp.startGame(name, level);
+    }
+
+    // --- Custom UI for Creative Slider ---
+    private static class CreativeSliderUI extends BasicSliderUI {
+        private static final Color GRADIENT_START = new Color(255, 100, 80);  // Coral/Orange
+        private static final Color GRADIENT_END = new Color(70, 130, 180);    // Steel Blue
+        private static final Color THUMB_COLOR = new Color(255, 215, 0);      // Gold
+
+        public CreativeSliderUI(JSlider b) {
+            super(b);
+        }
+
+        @Override
+        public void paintTrack(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g;
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            
+            Rectangle trackBounds = trackRect;
+            int h = 14; // Thicker track for better visuals
+            int y = trackBounds.y + (trackBounds.height - h) / 2;
+
+            // Gradient Track
+            GradientPaint gp = new GradientPaint(trackBounds.x, y, GRADIENT_START, 
+                                                 trackBounds.x + trackBounds.width, y, GRADIENT_END);
+            g2.setPaint(gp);
+            g2.fillRoundRect(trackBounds.x, y, trackBounds.width, h, h, h);
+            
+            // Track Border
+            g2.setColor(new Color(50, 50, 50, 100));
+            g2.drawRoundRect(trackBounds.x, y, trackBounds.width, h, h, h);
+        }
+
+        @Override
+        public void paintThumb(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g;
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            
+            Rectangle thumbBounds = thumbRect;
+            int w = thumbBounds.width;
+            int h = thumbBounds.height;
+
+            // Make thumb slightly smaller than full bounds for margin
+            int pad = 2;
+            
+            // Shadow
+            g2.setColor(new Color(0, 0, 0, 50));
+            g2.fillOval(thumbBounds.x + pad + 2, thumbBounds.y + pad + 2, w - 2*pad, h - 2*pad);
+
+            // Gold Knob
+            g2.setColor(THUMB_COLOR);
+            g2.fillOval(thumbBounds.x + pad, thumbBounds.y + pad, w - 2*pad, h - 2*pad);
+            
+            // Shine effect
+            g2.setColor(new Color(255, 255, 255, 150));
+            g2.fillOval(thumbBounds.x + pad + 4, thumbBounds.y + pad + 4, (w - 2*pad)/3, (h - 2*pad)/3);
+            
+            // Border
+            g2.setColor(Color.WHITE);
+            g2.setStroke(new BasicStroke(2));
+            g2.drawOval(thumbBounds.x + pad, thumbBounds.y + pad, w - 2*pad, h - 2*pad);
+        }
+        
+        @Override
+        protected Dimension getThumbSize() {
+            // Larger thumb for better grip visually
+            return new Dimension(26, 26);
+        }
     }
 }
