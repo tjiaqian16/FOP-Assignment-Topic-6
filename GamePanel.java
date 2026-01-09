@@ -24,9 +24,9 @@ public class GamePanel extends JPanel {
     private boolean gameEnded = false;
 
     // --- PLAYER LOGIC CONNECTORS ---
-    private HumanPlayer humanPlayer;   // For Mode 1
-    private RandomPlayer randomPlayer; // For Mode 2 (NEW)
-    private AIPlayer aiPlayer;         // For Mode 3
+    private HumanPlayer humanPlayer;   
+    private RandomPlayer randomPlayer; 
+    private AIPlayer aiPlayer;         
     
     private boolean isHumanTurn = false;
 
@@ -38,8 +38,7 @@ public class GamePanel extends JPanel {
         // Initialize Player Helpers
         this.humanPlayer = new HumanPlayer();
         this.randomPlayer = new RandomPlayer(); 
-        // AIPlayer is initialized per turn or level usually, but can be done here if stateless
-
+        
         setLayout(new BorderLayout(10, 10));
 
         // --- Top Control Panel ---
@@ -51,7 +50,6 @@ public class GamePanel extends JPanel {
             mainApp.showView("HOME");
         });
         
-        // Center Controls
         JPanel centerControls = new JPanel(new FlowLayout(FlowLayout.CENTER));
         statusLabel = new JLabel("Waiting...");
         statusLabel.setFont(new Font("Arial", Font.BOLD, 14));
@@ -79,7 +77,6 @@ public class GamePanel extends JPanel {
             btn.setBackground(Color.LIGHT_GRAY);
             btn.setEnabled(false);
             
-            // Connect Clicks to Human Player Logic
             int finalIndex = i;
             btn.addActionListener(e -> handleGridClick(finalIndex)); 
             
@@ -140,36 +137,64 @@ public class GamePanel extends JPanel {
         }
 
         int mode = mainApp.getGameMode();
-        int chosenMove = -1;
 
-        // --- MODE SELECTION LOGIC ---
+        // --- MODE 1: HUMAN PLAYER ---
         if (mode == 1) { 
-            // MODE 1: HUMAN (Interactive)
             startHumanTurn(dice, moves);
-            return; // Wait for user click
+            return; 
         } 
-        else if (mode == 2) {
-            // MODE 2: RANDOM PLAYER (Fixed!)
-            // Previously this block was missing/using AI
+        
+        // --- MODE 2 & 3: COMPUTER (AI/RANDOM) ---
+        int chosenMove = -1;
+        String playerName = (mode == 2) ? "Random Player" : "AI";
+
+        if (mode == 2) {
             chosenMove = randomPlayer.chooseMove(moves);
-            
-            // Note: If dice are fixed from file, the game might still *feel* similar,
-            // but the choices made here are now genuinely random.
-        } 
-        else {
-            // MODE 3: AI PLAYER
+        } else {
             aiPlayer = new AIPlayer(gameState.targetPiece);
             chosenMove = aiPlayer.chooseMove(moves, currentPositions);
         }
 
-        // Execute Computer/Random Move
+        // --- VISUALIZATION STEP (SHOW THE MOVE) ---
         if (chosenMove != -1) {
-            executeMove(chosenMove / 100, chosenMove % 100);
-            finishTurn();
+            int pieceId = chosenMove / 100;
+            int destination = chosenMove % 100;
+            int currentPos = currentPositions[pieceId - 1];
+
+            // 1. Highlight the Piece and Destination BEFORE moving
+            highlightComputerMove(currentPos, destination);
+            infoLabel.setText(playerName + " (Dice " + dice + ") is moving P" + pieceId + "...");
+            
+            // Disable button so user can't click while animation plays
+            nextTurnButton.setEnabled(false); 
+
+            // 2. Create a Timer to delay the actual move 
+            // CHANGED: Delay increased to 2500ms (2.5 seconds)
+            Timer animationTimer = new Timer(2500, e -> {
+                executeMove(pieceId, destination);
+                finishTurn();
+            });
+            animationTimer.setRepeats(false); // Run only once
+            animationTimer.start();
         }
     }
 
-    // --- HUMAN PLAYER LOGIC (Delegated to HumanPlayer.java) ---
+    private void highlightComputerMove(int start, int end) {
+        // Reset board first to clear old colors
+        updateBoard(); 
+        
+        // Highlight Start (Orange)
+        if (start >= 0 && start < gridButtons.length) {
+            gridButtons[start].setBackground(new Color(255, 165, 0)); // Orange
+        }
+        
+        // Highlight Destination (Green)
+        if (end >= 0 && end < gridButtons.length) {
+            gridButtons[end].setBackground(new Color(50, 205, 50)); // Lime Green
+        }
+    }
+
+    // --- HUMAN PLAYER LOGIC ---
     private void startHumanTurn(int dice, List<Integer> moves) {
         this.isHumanTurn = true;
         humanPlayer.setCurrentMoves(moves);
@@ -218,7 +243,6 @@ public class GamePanel extends JPanel {
         if (humanPlayer.isValidDestination(index)) {
             executeMove(humanPlayer.getSelectedPiece(), index);
             isHumanTurn = false;
-            nextTurnButton.setEnabled(true);
             finishTurn();
         }
     }
@@ -241,6 +265,10 @@ public class GamePanel extends JPanel {
 
     private void finishTurn() {
         updateBoard();
+        
+        // Re-enable the button (it might have been disabled by the animation timer)
+        nextTurnButton.setEnabled(true);
+
         if (gameState.isWinning(currentPositions)) {
             endGame(true, "You Win!");
             return;
@@ -250,6 +278,13 @@ public class GamePanel extends JPanel {
             return;
         }
         currentTurn++;
+        
+        // Update label to show next turn is ready
+        if (mainApp.getGameMode() == 1) {
+             nextTurnButton.setText("Roll Dice");
+        } else {
+             nextTurnButton.setText("Next AI Turn");
+        }
     }
 
     private void endGame(boolean won, String message) {
@@ -279,6 +314,4 @@ public class GamePanel extends JPanel {
         }
     }
 }
-
-  
     

@@ -4,3 +4,6 @@ JiaQian,1,Won
 JiaQian,2,Won
 RandomPlayer,2,Won
 AIPlayer,4,Won
+RandomPlayer,2,Lost
+Pris,2,Lost
+AIPlayer,2,Won
