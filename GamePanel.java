@@ -17,15 +17,21 @@ public class GamePanel extends JPanel {
     private int currentTurn = 0;
     private int targetPiece;
 
-    // Player Info for Leaderboard
+    // Player Info
     private String currentPlayerName;
     private int currentLevel;
     private boolean gameEnded = false;
+
+    // --- CONNECTION TO HUMAN PLAYER ---
+    private HumanPlayer humanPlayer; // The backend logic class
+    private boolean isHumanTurn = false;
 
     private static final int BOARD_SIZE = 10;
 
     public GamePanel(MainInterface app) {
         this.mainApp = app;
+        this.humanPlayer = new HumanPlayer(); // Initialize the logic class
+
         setLayout(new BorderLayout(10, 10));
 
         // --- Top Control Panel ---
@@ -37,21 +43,17 @@ public class GamePanel extends JPanel {
             mainApp.showView("HOME");
         });
         
-        // Center Controls Container
         JPanel centerControls = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        
         statusLabel = new JLabel("Waiting...");
         statusLabel.setFont(new Font("Arial", Font.BOLD, 14));
         
-        nextTurnButton = new JButton("Next Move");
+        nextTurnButton = new JButton("Next Turn");
         nextTurnButton.addActionListener(e -> playNextTurn());
 
         centerControls.add(statusLabel);
         centerControls.add(nextTurnButton);
-
         controlPanel.add(quitButton, BorderLayout.WEST);
         controlPanel.add(centerControls, BorderLayout.CENTER);
-        
         add(controlPanel, BorderLayout.NORTH);
 
         // --- Bottom Info Panel ---
@@ -66,7 +68,12 @@ public class GamePanel extends JPanel {
         for (int i = 0; i < gridButtons.length; i++) {
             JButton btn = new JButton();
             btn.setBackground(Color.LIGHT_GRAY);
-            btn.setEnabled(false); // Grid is just for display
+            btn.setEnabled(false);
+            
+            // CONNECT INTERFACE TO BACKEND
+            int finalIndex = i;
+            btn.addActionListener(e -> handleGridClick(finalIndex)); 
+            
             gridButtons[i] = btn;
             boardPanel.add(btn);
         }
@@ -88,13 +95,13 @@ public class GamePanel extends JPanel {
             currentPositions = loader.initialPositions.clone();
             currentTurn = 0;
             
-            // Store info for leaderboard
             this.currentPlayerName = playerName;
             this.currentLevel = levelNum;
             this.gameEnded = false;
+            this.isHumanTurn = false;
 
             statusLabel.setText(playerName + " | Level " + levelNum + " | Target: " + targetPiece);
-            infoLabel.setText("Game Started. Good Luck!");
+            infoLabel.setText("Click 'Next Turn' to start!");
             nextTurnButton.setEnabled(true);
             updateBoard();
 
@@ -105,10 +112,8 @@ public class GamePanel extends JPanel {
 
     private void playNextTurn() {
         if (gameEnded) return;
-
         SoundManager.getInstance().playSound("click.wav");
 
-        // Check Turn Limit Loss
         if (currentTurn >= 30 || currentTurn >= loader.diceSequence.size()) {
             endGame(false, "Game Over! Turn limit reached.");
             return;
@@ -119,37 +124,113 @@ public class GamePanel extends JPanel {
 
         if (moves.isEmpty()) {
             infoLabel.setText("Turn " + (currentTurn + 1) + " | Dice: " + dice + " | No moves possible.");
-        } else {
-            // Using AI logic for move selection (as per your existing code)
-            AIPlayer ai = new AIPlayer(gameState.targetPiece);
-            int chosenMove = ai.chooseMove(moves, currentPositions);
-
-            int pieceToMove = chosenMove / 100;
-            int destination = chosenMove % 100;
-
-            // Execute Move and Capture
-            for (int i = 0; i < 6; i++) {
-                if (currentPositions[i] == destination) currentPositions[i] = -1; // Capture
-            }
-            currentPositions[pieceToMove - 1] = destination;
-            
-            infoLabel.setText("Moved P" + pieceToMove + " to " + destination);
+            currentTurn++;
+            updateBoard();
+            return;
         }
 
-        updateBoard();
+        // --- USE HUMAN PLAYER CLASS ---
+        if (mainApp.getGameMode() == 1) { 
+            startHumanTurn(dice, moves);
+            return; 
+        } 
+        
+        // --- AI / RANDOM LOGIC ---
+        int chosenMove = -1;
+        if (mainApp.getGameMode() == 2) {
+            chosenMove = moves.get(new java.util.Random().nextInt(moves.size()));
+        } else {
+            AIPlayer ai = new AIPlayer(gameState.targetPiece);
+            chosenMove = ai.chooseMove(moves, currentPositions);
+        }
 
-        // Check Win Condition
+        executeMove(chosenMove / 100, chosenMove % 100);
+        finishTurn();
+    }
+
+    private void startHumanTurn(int dice, List<Integer> moves) {
+        this.isHumanTurn = true;
+        
+        // Delegate state setup to HumanPlayer.java
+        humanPlayer.setCurrentMoves(moves);
+        
+        infoLabel.setText("Your Turn! Dice: " + dice + ". Select a highlighted Piece.");
+        nextTurnButton.setEnabled(false);
+        highlightValidPieces();
+    }
+
+    private void highlightValidPieces() {
+        updateBoard();
+        // Ask HumanPlayer which pieces can move
+        for (int i = 0; i < currentPositions.length; i++) {
+            int pos = currentPositions[i];
+            int pieceId = i + 1;
+            
+            if (pos != -1 && humanPlayer.canPieceMove(pieceId)) {
+                gridButtons[pos].setBackground(new Color(255, 255, 100)); // Yellow
+                gridButtons[pos].setEnabled(true);
+            }
+        }
+    }
+
+    private void handleGridClick(int index) {
+        if (!isHumanTurn) return;
+
+        int clickedPieceId = getPieceAt(index);
+
+        // 1. Try to Select a Piece (Delegate to HumanPlayer)
+        if (clickedPieceId != -1 && humanPlayer.selectPiece(clickedPieceId)) {
+            // Highlighting Visuals
+            highlightValidPieces();
+            gridButtons[index].setBackground(new Color(255, 200, 0)); // Orange Selected
+            
+            // Highlight Destinations
+            for (int r = 0; r < BOARD_SIZE * BOARD_SIZE; r++) {
+                if (humanPlayer.isValidDestination(r)) {
+                    gridButtons[r].setBackground(new Color(100, 255, 100)); // Green
+                    gridButtons[r].setEnabled(true);
+                }
+            }
+            infoLabel.setText("Selected P" + clickedPieceId + ". Click a Green Square.");
+            SoundManager.getInstance().playSound("click.wav");
+            return;
+        }
+
+        // 2. Try to Move to a Destination (Delegate to HumanPlayer)
+        if (humanPlayer.isValidDestination(index)) {
+            executeMove(humanPlayer.getSelectedPiece(), index);
+            
+            isHumanTurn = false;
+            nextTurnButton.setEnabled(true);
+            finishTurn();
+        }
+    }
+
+    private int getPieceAt(int index) {
+        for (int i = 0; i < currentPositions.length; i++) {
+            if (currentPositions[i] == index) return i + 1;
+        }
+        return -1;
+    }
+
+    private void executeMove(int pieceToMove, int destination) {
+        for (int i = 0; i < 6; i++) {
+            if (currentPositions[i] == destination) currentPositions[i] = -1;
+        }
+        currentPositions[pieceToMove - 1] = destination;
+        infoLabel.setText("Moved P" + pieceToMove + " to " + destination);
+    }
+
+    private void finishTurn() {
+        updateBoard();
         if (gameState.isWinning(currentPositions)) {
             endGame(true, "You Win!");
             return;
         }
-
-        // Check Loss Condition: Target Captured
         if (currentPositions[targetPiece - 1] == -1) {
             endGame(false, "Game Over! Target Captured.");
             return;
         }
-
         currentTurn++;
     }
 
@@ -158,8 +239,6 @@ public class GamePanel extends JPanel {
         infoLabel.setText(message);
         JOptionPane.showMessageDialog(this, message);
         nextTurnButton.setEnabled(false);
-        
-        // Save to Leaderboard
         mainApp.recordGameResult(currentPlayerName, currentLevel, won ? "Won" : "Lost");
     }
 
@@ -167,6 +246,7 @@ public class GamePanel extends JPanel {
         for (JButton btn : gridButtons) {
             btn.setText("");
             btn.setBackground(Color.LIGHT_GRAY);
+            btn.setEnabled(false);
         }
         for (int i = 0; i < currentPositions.length; i++) {
             int pos = currentPositions[i];
@@ -174,6 +254,7 @@ public class GamePanel extends JPanel {
                 int index = (pos / 10) * BOARD_SIZE + (pos % 10);
                 if (index >= 0 && index < gridButtons.length) {
                     gridButtons[index].setText("P" + (i + 1));
+                    gridButtons[index].setFont(new Font("Arial", Font.BOLD, 16));
                     gridButtons[index].setBackground(i + 1 == targetPiece ? new Color(255, 100, 100) : new Color(100, 200, 255));
                 }
             }
