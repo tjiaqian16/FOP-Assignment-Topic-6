@@ -405,7 +405,7 @@ public class GamePanel extends BackgroundImagePanel {
     }
 
     // ============================
-    // SETTINGS DIALOG
+    // SETTINGS DIALOG (UPDATED)
     // ============================
     private void showSettingsDialog() {
         SoundManager.getInstance().playSound("click.wav");
@@ -427,23 +427,35 @@ public class GamePanel extends BackgroundImagePanel {
         title.setHorizontalAlignment(SwingConstants.CENTER);
         content.add(title);
 
-        JCheckBox musicCb = new JCheckBox("Background Music");
-        musicCb.setSelected(SoundManager.getInstance().isMusicEnabled());
-        musicCb.setOpaque(false);
-        musicCb.addActionListener(e -> SoundManager.getInstance().setMusicEnabled(musicCb.isSelected()));
-        content.add(musicCb);
+        // Music Switch Row (UPDATED: Uses ToggleSwitch)
+        JPanel musicPanel = new JPanel(new BorderLayout());
+        musicPanel.setOpaque(false);
+        JLabel musicLabel = new JLabel("Background Music");
+        musicLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+        ToggleSwitch musicSwitch = new ToggleSwitch(SoundManager.getInstance().isMusicEnabled());
+        musicSwitch.addSwitchListener(isOn -> SoundManager.getInstance().setMusicEnabled(isOn));
+        musicPanel.add(musicLabel, BorderLayout.WEST);
+        musicPanel.add(musicSwitch, BorderLayout.EAST);
+        content.add(musicPanel);
 
-        JCheckBox soundCb = new JCheckBox("Sound Effects");
-        soundCb.setSelected(SoundManager.getInstance().isSoundEnabled());
-        soundCb.setOpaque(false);
-        soundCb.addActionListener(e -> SoundManager.getInstance().setSoundEnabled(soundCb.isSelected()));
-        content.add(soundCb);
+        // Sound Switch Row (UPDATED: Uses ToggleSwitch)
+        JPanel soundPanel = new JPanel(new BorderLayout());
+        soundPanel.setOpaque(false);
+        JLabel soundLabel = new JLabel("Sound Effects");
+        soundLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+        ToggleSwitch soundSwitch = new ToggleSwitch(SoundManager.getInstance().isSoundEnabled());
+        soundSwitch.addSwitchListener(isOn -> SoundManager.getInstance().setSoundEnabled(isOn));
+        soundPanel.add(soundLabel, BorderLayout.WEST);
+        soundPanel.add(soundSwitch, BorderLayout.EAST);
+        content.add(soundPanel);
 
+        // Resume Button
         JButton resumeBtn = new RoundedButton("Resume Game");
         resumeBtn.setBackground(new Color(46, 204, 113)); 
         resumeBtn.addActionListener(e -> dialog.dispose());
         content.add(resumeBtn);
 
+        // Home Button
         JButton homeBtn = new RoundedButton("Quit to Home");
         homeBtn.setBackground(new Color(231, 76, 60)); 
         homeBtn.addActionListener(e -> {
@@ -458,13 +470,17 @@ public class GamePanel extends BackgroundImagePanel {
     }
 
     // ============================
-    // CUSTOM BUTTON
+    // CUSTOM BUTTON (FIXED)
     // ============================
     private static class RoundedButton extends JButton {
         private Color normalColor = new Color(0, 105, 120);
         private Color hoverColor = new Color(0, 140, 160);
         private Color pressedColor = new Color(0, 70, 80);
         
+        // Flags to track state instead of overwriting background property
+        private boolean isHovered = false;
+        private boolean isPressed = false;
+
         public RoundedButton(String text) {
             super(text);
             setContentAreaFilled(false);
@@ -475,13 +491,16 @@ public class GamePanel extends BackgroundImagePanel {
             setCursor(new Cursor(Cursor.HAND_CURSOR));
             
             addMouseListener(new MouseAdapter() {
-                public void mouseEntered(MouseEvent e) { setBackground(hoverColor); repaint(); }
-                public void mouseExited(MouseEvent e) { setBackground(normalColor); repaint(); }
-                public void mousePressed(MouseEvent e) { setBackground(pressedColor); repaint(); }
-                public void mouseReleased(MouseEvent e) { setBackground(hoverColor); repaint(); }
+                // Just update flags and repaint. Do NOT call setBackground here.
+                public void mouseEntered(MouseEvent e) { isHovered = true; repaint(); }
+                public void mouseExited(MouseEvent e) { isHovered = false; isPressed = false; repaint(); }
+                public void mousePressed(MouseEvent e) { isPressed = true; repaint(); }
+                public void mouseReleased(MouseEvent e) { isPressed = false; repaint(); }
             });
         }
         
+        // This allows you to set the base color (e.g. Red for Quit, Green for Resume)
+        // It calculates the hover/pressed shades ONCE, when configured.
         @Override
         public void setBackground(Color bg) {
             this.normalColor = bg;
@@ -494,10 +513,75 @@ public class GamePanel extends BackgroundImagePanel {
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(normalColor);
+            
+            // Choose color based on current state flags
+            if (isPressed) {
+                g2.setColor(pressedColor);
+            } else if (isHovered) {
+                g2.setColor(hoverColor);
+            } else {
+                g2.setColor(normalColor);
+            }
+            
             g2.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
             super.paintComponent(g2);
             g2.dispose();
+        }
+    }
+
+    // ============================
+    // TOGGLE SWITCH CLASS
+    // ============================
+    private static class ToggleSwitch extends JPanel {
+        private boolean isOn;
+        private Color switchOnColor = new Color(46, 204, 113); 
+        private Color switchOffColor = new Color(189, 195, 199); 
+        private Color buttonColor = Color.WHITE;
+        private SwitchListener listener;
+
+        public interface SwitchListener {
+            void onSwitchChanged(boolean isOn);
+        }
+
+        public ToggleSwitch(boolean initialState) {
+            this.isOn = initialState;
+            setPreferredSize(new Dimension(80, 40));
+            setOpaque(false);
+            setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+            addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    isOn = !isOn;
+                    repaint();
+                    if (listener != null) {
+                        listener.onSwitchChanged(isOn);
+                    }
+                }
+            });
+        }
+
+        public void addSwitchListener(SwitchListener listener) {
+            this.listener = listener;
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g;
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth();
+            int h = getHeight();
+            int pad = 4;
+
+            g2.setColor(isOn ? switchOnColor : switchOffColor);
+            g2.fillRoundRect(0, 0, w, h, h, h);
+
+            g2.setColor(buttonColor);
+            int circleSize = h - (pad * 2);
+            int x = isOn ? (w - circleSize - pad) : pad;
+            g2.fillOval(x, pad, circleSize, circleSize);
         }
     }
 }
