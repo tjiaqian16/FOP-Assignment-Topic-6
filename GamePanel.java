@@ -17,6 +17,11 @@ public class GamePanel extends JPanel {
     private int currentTurn = 0;
     private int targetPiece;
 
+    // Player Info for Leaderboard
+    private String currentPlayerName;
+    private int currentLevel;
+    private boolean gameEnded = false;
+
     private static final int BOARD_SIZE = 10;
 
     public GamePanel(MainInterface app) {
@@ -24,7 +29,6 @@ public class GamePanel extends JPanel {
         setLayout(new BorderLayout(10, 10));
 
         // --- Top Control Panel ---
-        // CHANGED: Use BorderLayout to put Quit (Back) on Left
         JPanel controlPanel = new JPanel(new BorderLayout());
         
         quitButton = new JButton("Quit");
@@ -77,14 +81,20 @@ public class GamePanel extends JPanel {
                 return;
             }
 
-            loader = new GameLoader(filename); //
+            loader = new GameLoader(filename);
             gameState = new GameState();
             gameState.targetPiece = loader.targetPiece;
             this.targetPiece = loader.targetPiece;
             currentPositions = loader.initialPositions.clone();
             currentTurn = 0;
+            
+            // Store info for leaderboard
+            this.currentPlayerName = playerName;
+            this.currentLevel = levelNum;
+            this.gameEnded = false;
 
             statusLabel.setText(playerName + " | Level " + levelNum + " | Target: " + targetPiece);
+            infoLabel.setText("Game Started. Good Luck!");
             nextTurnButton.setEnabled(true);
             updateBoard();
 
@@ -94,27 +104,30 @@ public class GamePanel extends JPanel {
     }
 
     private void playNextTurn() {
+        if (gameEnded) return;
+
         SoundManager.getInstance().playSound("click.wav");
 
+        // Check Turn Limit Loss
         if (currentTurn >= 30 || currentTurn >= loader.diceSequence.size()) {
-            infoLabel.setText("Game Over! Turn limit reached.");
-            nextTurnButton.setEnabled(false);
+            endGame(false, "Game Over! Turn limit reached.");
             return;
         }
 
         int dice = loader.diceSequence.get(currentTurn);
-        List<Integer> moves = gameState.generatePossibleMoves(dice, currentPositions); //
+        List<Integer> moves = gameState.generatePossibleMoves(dice, currentPositions);
 
         if (moves.isEmpty()) {
             infoLabel.setText("Turn " + (currentTurn + 1) + " | Dice: " + dice + " | No moves possible.");
         } else {
-            // Using AI logic for move selection
+            // Using AI logic for move selection (as per your existing code)
             AIPlayer ai = new AIPlayer(gameState.targetPiece);
             int chosenMove = ai.chooseMove(moves, currentPositions);
 
             int pieceToMove = chosenMove / 100;
             int destination = chosenMove % 100;
 
+            // Execute Move and Capture
             for (int i = 0; i < 6; i++) {
                 if (currentPositions[i] == destination) currentPositions[i] = -1; // Capture
             }
@@ -125,11 +138,29 @@ public class GamePanel extends JPanel {
 
         updateBoard();
 
+        // Check Win Condition
         if (gameState.isWinning(currentPositions)) {
-            JOptionPane.showMessageDialog(this, "You Win!");
-            nextTurnButton.setEnabled(false);
+            endGame(true, "You Win!");
+            return;
         }
+
+        // Check Loss Condition: Target Captured
+        if (currentPositions[targetPiece - 1] == -1) {
+            endGame(false, "Game Over! Target Captured.");
+            return;
+        }
+
         currentTurn++;
+    }
+
+    private void endGame(boolean won, String message) {
+        gameEnded = true;
+        infoLabel.setText(message);
+        JOptionPane.showMessageDialog(this, message);
+        nextTurnButton.setEnabled(false);
+        
+        // Save to Leaderboard
+        mainApp.recordGameResult(currentPlayerName, currentLevel, won ? "Won" : "Lost");
     }
 
     private void updateBoard() {

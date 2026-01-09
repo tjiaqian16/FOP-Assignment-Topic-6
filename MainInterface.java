@@ -12,6 +12,7 @@ public class MainInterface extends JFrame {
     private GamePanel gamePanel;
     private SetupPage setupPage;
     private SettingsPage settingsPage;
+    private LeaderboardPage leaderboardPage; // Changed to class field
     
     // Game State
     private int selectedMode = 1; // 1 = Human, 2 = Random, 3 = AI
@@ -40,11 +41,10 @@ public class MainInterface extends JFrame {
         LoadingPage loadingPage = new LoadingPage(); 
         HomePage home = new HomePage(this);
         PlaySelectionPage playSelection = new PlaySelectionPage(this);
-        
-        // CORRECTION: Initialize the class field, do not declare a new local 'SetupPage setupPage'
         this.setupPage = new SetupPage(this); 
         
-        LeaderboardPage leaderboard = new LeaderboardPage(this);
+        // Initialize Leaderboard and store in field
+        this.leaderboardPage = new LeaderboardPage(this);
         
         // Initialize other fields
         this.gamePanel = new GamePanel(this);
@@ -55,7 +55,7 @@ public class MainInterface extends JFrame {
         mainContainer.add(home, "HOME");
         mainContainer.add(playSelection, "PLAY_SELECTION");
         mainContainer.add(setupPage, "SETUP");
-        mainContainer.add(leaderboard, "LEADERBOARD");
+        mainContainer.add(leaderboardPage, "LEADERBOARD");
         mainContainer.add(gamePanel, "GAME");
         mainContainer.add(settingsPage, "SETTINGS");
 
@@ -65,7 +65,7 @@ public class MainInterface extends JFrame {
         cardLayout.show(mainContainer, "LOADING");
         setVisible(true);
 
-        // 3. Timer to switch to HOME after 3 seconds (3000 ms)
+        // 3. Timer to switch to HOME after 3 seconds
         Timer timer = new Timer(3000, e -> showView("HOME"));
         timer.setRepeats(false); 
         timer.start();
@@ -89,6 +89,11 @@ public class MainInterface extends JFrame {
     public void startGame(String playerName, int level) {
         gamePanel.startLevel(level, playerName);
         showView("GAME");
+    }
+
+    // NEW METHOD: Record Result to Leaderboard
+    public void recordGameResult(String playerName, int level, String result) {
+        leaderboardPage.addEntry(playerName, level, result);
     }
 
     public static void main(String[] args) {
