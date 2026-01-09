@@ -14,14 +14,51 @@ public class SettingsPage extends BackgroundImagePanel {
         this.mainApp = app;
         this.soundManager = SoundManager.getInstance();
 
-        setLayout(new GridBagLayout());
+        // CHANGED: Use BorderLayout
+        setLayout(new BorderLayout());
+
+        // --- Back Button (Top-Left) ---
+        JButton backBtn = new JButton();
+        try {
+            File imgFile = new File("back_icon.png");
+            if (imgFile.exists()) {
+                ImageIcon icon = new ImageIcon(ImageIO.read(imgFile));
+                Image scaled = icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+                backBtn.setIcon(new ImageIcon(scaled));
+                backBtn.setBorderPainted(false);
+                backBtn.setContentAreaFilled(false);
+                backBtn.setFocusPainted(false);
+                backBtn.setPreferredSize(new Dimension(60, 60)); 
+            } else {
+                backBtn.setText("Back");
+                backBtn.setPreferredSize(new Dimension(150, 40));
+                backBtn.setFont(new Font("SansSerif", Font.BOLD, 18));
+            }
+        } catch (Exception e) {
+            backBtn.setText("Back");
+        }
+
+        backBtn.addActionListener(e -> {
+            soundManager.playSound("click.wav");
+            mainApp.showView("HOME");
+        });
+
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        topPanel.setOpaque(false);
+        topPanel.add(backBtn);
+        add(topPanel, BorderLayout.NORTH);
+
+
+        // --- Center Content Wrapper ---
+        JPanel centerWrapper = new JPanel(new GridBagLayout());
+        centerWrapper.setOpaque(false);
 
         // --- Title ---
         JLabel titleLabel = new JLabel("Settings");
         titleLabel.setFont(new Font("Serif", Font.BOLD, 40));
         titleLabel.setForeground(Color.WHITE);
 
-        // --- Settings Components ---
+        // --- Settings Components Box ---
         JPanel contentPanel = new JPanel(new GridBagLayout());
         contentPanel.setOpaque(false);
         contentPanel.setBackground(new Color(255, 255, 255, 150)); // Semi-transparent box
@@ -48,41 +85,15 @@ public class SettingsPage extends BackgroundImagePanel {
         gbc.gridx = 0; gbc.gridy = 1; contentPanel.add(soundLabel, gbc);
         gbc.gridx = 1; contentPanel.add(soundSwitch, gbc);
 
-        // --- Back Button (Image) ---
-        JButton backBtn = new JButton();
-        try {
-            File imgFile = new File("back_icon.png");
-            if (imgFile.exists()) {
-                ImageIcon icon = new ImageIcon(ImageIO.read(imgFile));
-                Image scaled = icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
-                backBtn.setIcon(new ImageIcon(scaled));
-                backBtn.setBorderPainted(false);
-                backBtn.setContentAreaFilled(false);
-                backBtn.setFocusPainted(false);
-                // Remove size preference if using icon to let it auto-size or set manually
-                backBtn.setPreferredSize(new Dimension(60, 60)); 
-            } else {
-                backBtn.setText("Back");
-                backBtn.setPreferredSize(new Dimension(150, 40));
-                backBtn.setFont(new Font("SansSerif", Font.BOLD, 18));
-            }
-        } catch (Exception e) {
-            backBtn.setText("Back");
-        }
-
-        backBtn.addActionListener(e -> {
-            soundManager.playSound("click.wav");
-            mainApp.showView("HOME");
-        });
-
-        // --- Main Layout ---
+        // Add Title and Box to Center Wrapper
         GridBagConstraints mainGbc = new GridBagConstraints();
         mainGbc.insets = new Insets(20, 0, 20, 0);
         mainGbc.gridx = 0;
         
-        mainGbc.gridy = 0; add(titleLabel, mainGbc);
-        mainGbc.gridy = 1; add(contentPanel, mainGbc);
-        mainGbc.gridy = 2; add(backBtn, mainGbc);
+        mainGbc.gridy = 0; centerWrapper.add(titleLabel, mainGbc);
+        mainGbc.gridy = 1; centerWrapper.add(contentPanel, mainGbc);
+        
+        add(centerWrapper, BorderLayout.CENTER);
     }
 
     private JLabel createLabel(String text) {

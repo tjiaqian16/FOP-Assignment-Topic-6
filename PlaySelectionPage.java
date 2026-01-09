@@ -14,7 +14,40 @@ public class PlaySelectionPage extends BackgroundImagePanel {
         this.mainApp = app;
         this.soundManager = SoundManager.getInstance();
 
-        setLayout(new GridBagLayout());
+        // CHANGED: Use BorderLayout to place Back button at Top-Left
+        setLayout(new BorderLayout());
+
+        // --- Back Button (Moved to Top-Left) ---
+        JButton backBtn = new JButton();
+        try {
+            File imgFile = new File("back_icon.png");
+            if (imgFile.exists()) {
+                ImageIcon icon = new ImageIcon(ImageIO.read(imgFile));
+                Image scaled = icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+                backBtn.setIcon(new ImageIcon(scaled));
+                backBtn.setBorderPainted(false);
+                backBtn.setContentAreaFilled(false);
+                backBtn.setFocusPainted(false);
+            } else {
+                backBtn.setText("Back"); 
+            }
+        } catch (Exception e) {
+            backBtn.setText("Back");
+        }
+
+        backBtn.addActionListener(e -> {
+            soundManager.playSound("click.wav");
+            mainApp.showView("HOME");
+        });
+
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        topPanel.setOpaque(false);
+        topPanel.add(backBtn);
+        add(topPanel, BorderLayout.NORTH);
+
+        // --- Center Content Panel ---
+        JPanel centerPanel = new JPanel(new GridBagLayout());
+        centerPanel.setOpaque(false);
 
         // --- 1. Title Section (Image with Fallback) ---
         JLabel titleLabel = new JLabel();
@@ -48,45 +81,17 @@ public class PlaySelectionPage extends BackgroundImagePanel {
         randomBtn.addActionListener(e -> selectMode(2));
         aiBtn.addActionListener(e -> selectMode(3));
 
-        // --- 3. Bottom Navigation (Back Image Button) ---
-        JPanel bottomPanel = new JPanel(new FlowLayout());
-        bottomPanel.setOpaque(false);
-        
-        JButton backBtn = new JButton();
-        // Try to load back_icon.png
-        try {
-            File imgFile = new File("back_icon.png");
-            if (imgFile.exists()) {
-                ImageIcon icon = new ImageIcon(ImageIO.read(imgFile));
-                // Resize to 50x50 (adjust as needed)
-                Image scaled = icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
-                backBtn.setIcon(new ImageIcon(scaled));
-                backBtn.setBorderPainted(false);
-                backBtn.setContentAreaFilled(false);
-                backBtn.setFocusPainted(false);
-            } else {
-                backBtn.setText("Back"); // Fallback text
-            }
-        } catch (Exception e) {
-            backBtn.setText("Back");
-        }
-
-        backBtn.addActionListener(e -> {
-            soundManager.playSound("click.wav");
-            mainApp.showView("HOME");
-        });
-        bottomPanel.add(backBtn);
-
-        // --- Layout Constraints ---
+        // --- Layout Constraints for Center ---
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(15, 0, 15, 0);
         gbc.gridx = 0;
 
-        gbc.gridy = 0; add(titleLabel, gbc);
-        gbc.gridy = 1; add(humanBtn, gbc);
-        gbc.gridy = 2; add(randomBtn, gbc);
-        gbc.gridy = 3; add(aiBtn, gbc);
-        gbc.gridy = 4; add(bottomPanel, gbc);
+        gbc.gridy = 0; centerPanel.add(titleLabel, gbc);
+        gbc.gridy = 1; centerPanel.add(humanBtn, gbc);
+        gbc.gridy = 2; centerPanel.add(randomBtn, gbc);
+        gbc.gridy = 3; centerPanel.add(aiBtn, gbc);
+        
+        add(centerPanel, BorderLayout.CENTER);
     }
 
     private void selectMode(int mode) {

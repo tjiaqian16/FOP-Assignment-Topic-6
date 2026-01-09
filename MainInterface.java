@@ -8,7 +8,7 @@ public class MainInterface extends JFrame {
     private CardLayout cardLayout;
     private JPanel mainContainer;
     
-    // Pages
+    // Pages - Fields
     private GamePanel gamePanel;
     private SetupPage setupPage;
     private SettingsPage settingsPage;
@@ -37,16 +37,21 @@ public class MainInterface extends JFrame {
         mainContainer = new JPanel(cardLayout);
 
         // --- Initialize Pages ---
-        LoadingPage loadingPage = new LoadingPage(); // NEW: Create Loading Page
+        LoadingPage loadingPage = new LoadingPage(); 
         HomePage home = new HomePage(this);
         PlaySelectionPage playSelection = new PlaySelectionPage(this);
-        SetupPage setupPage = new SetupPage(this);
+        
+        // CORRECTION: Initialize the class field, do not declare a new local 'SetupPage setupPage'
+        this.setupPage = new SetupPage(this); 
+        
         LeaderboardPage leaderboard = new LeaderboardPage(this);
-        gamePanel = new GamePanel(this);
-        settingsPage = new SettingsPage(this);
+        
+        // Initialize other fields
+        this.gamePanel = new GamePanel(this);
+        this.settingsPage = new SettingsPage(this);
 
         // --- Add Pages to Layout ---
-        mainContainer.add(loadingPage, "LOADING"); // NEW: Add it to container
+        mainContainer.add(loadingPage, "LOADING");
         mainContainer.add(home, "HOME");
         mainContainer.add(playSelection, "PLAY_SELECTION");
         mainContainer.add(setupPage, "SETUP");
@@ -62,7 +67,7 @@ public class MainInterface extends JFrame {
 
         // 3. Timer to switch to HOME after 3 seconds (3000 ms)
         Timer timer = new Timer(3000, e -> showView("HOME"));
-        timer.setRepeats(false); // Only run once
+        timer.setRepeats(false); 
         timer.start();
     }
 

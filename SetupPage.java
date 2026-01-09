@@ -10,12 +10,45 @@ public class SetupPage extends BackgroundImagePanel {
     private JSlider levelSlider; 
 
     public SetupPage(MainInterface app) {
-        // CHANGED: Uses "setup_bg.jpg" specifically for this page. 
-        // Ensure you add this image file to your project folder.
+        // Uses "setup_bg.jpg" specifically for this page.
         super("setup_bg.jpg"); 
         
         this.mainApp = app;
-        setLayout(new GridBagLayout());
+        // CHANGED: Use BorderLayout to position Back button at Top-Left
+        setLayout(new BorderLayout());
+        
+        // --- Back Button (Moved to Top-Left) ---
+        JButton backBtn = new JButton();
+        try {
+            File imgFile = new File("back_icon.png");
+            if (imgFile.exists()) {
+                ImageIcon icon = new ImageIcon(ImageIO.read(imgFile));
+                Image scaled = icon.getImage().getScaledInstance(60, 60, Image.SCALE_SMOOTH);
+                backBtn.setIcon(new ImageIcon(scaled));
+                backBtn.setBorderPainted(false);
+                backBtn.setContentAreaFilled(false);
+                backBtn.setFocusPainted(false);
+                backBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            } else {
+                backBtn.setText("Back");
+            }
+        } catch (Exception e) {
+            backBtn.setText("Back");
+        }
+        backBtn.addActionListener(e -> {
+            SoundManager.getInstance().playSound("click.wav");
+            mainApp.showView("PLAY_SELECTION");
+        });
+
+        // Panel for Back Button
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        topPanel.setOpaque(false);
+        topPanel.add(backBtn);
+        add(topPanel, BorderLayout.NORTH);
+
+        // --- Center Content Panel ---
+        JPanel centerPanel = new JPanel(new GridBagLayout());
+        centerPanel.setOpaque(false);
         
         // --- 1. Player Name Input ---
         nameLabel = new JLabel("Enter Player's Name: ");
@@ -43,7 +76,6 @@ public class SetupPage extends BackgroundImagePanel {
         // --- 3. Start Game Button (Image) ---
         JButton startBtn = new JButton();
         try {
-            // Ensure "start_icon.png" exists in your folder
             File imgFile = new File("start_icon.png"); 
             if (imgFile.exists()) {
                 ImageIcon icon = new ImageIcon(ImageIO.read(imgFile));
@@ -68,56 +100,32 @@ public class SetupPage extends BackgroundImagePanel {
         }
         startBtn.addActionListener(e -> handleStart());
 
-        // --- Back Button (Image) ---
-        JButton backBtn = new JButton();
-        try {
-            File imgFile = new File("back_icon.png");
-            if (imgFile.exists()) {
-                ImageIcon icon = new ImageIcon(ImageIO.read(imgFile));
-                Image scaled = icon.getImage().getScaledInstance(60, 60, Image.SCALE_SMOOTH);
-                backBtn.setIcon(new ImageIcon(scaled));
-                backBtn.setBorderPainted(false);
-                backBtn.setContentAreaFilled(false);
-                backBtn.setFocusPainted(false);
-                backBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            } else {
-                backBtn.setText("Back");
-            }
-        } catch (Exception e) {
-            backBtn.setText("Back");
-        }
-        backBtn.addActionListener(e -> {
-            SoundManager.getInstance().playSound("click.wav");
-            mainApp.showView("PLAY_SELECTION");
-        });
-
-        // --- Layout ---
+        // --- Layout for Center Panel ---
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(15, 10, 15, 10);
         
         gbc.gridx = 0; gbc.gridy = 0;
         gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.CENTER;
-        add(nameLabel, gbc);
+        centerPanel.add(nameLabel, gbc);
 
         gbc.gridy = 1;
-        add(nameField, gbc);
+        centerPanel.add(nameField, gbc);
 
         gbc.gridy = 2;
         gbc.insets = new Insets(30, 10, 5, 10); 
-        add(levelLabel, gbc);
+        centerPanel.add(levelLabel, gbc);
 
         gbc.gridy = 3;
         gbc.insets = new Insets(0, 10, 30, 10);
-        add(levelSlider, gbc);
+        centerPanel.add(levelSlider, gbc);
 
         gbc.gridy = 4;
         gbc.insets = new Insets(10, 10, 10, 10);
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 50, 0));
-        btnPanel.setOpaque(false);
-        btnPanel.add(backBtn);
-        btnPanel.add(startBtn);
-        add(btnPanel, gbc);
+        // CHANGED: Only start button remains here
+        centerPanel.add(startBtn, gbc);
+
+        add(centerPanel, BorderLayout.CENTER);
     }
 
     @Override

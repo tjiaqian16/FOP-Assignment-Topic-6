@@ -23,31 +23,39 @@ public class GamePanel extends JPanel {
         this.mainApp = app;
         setLayout(new BorderLayout(10, 10));
 
-        // Top Panel
-        JPanel controlPanel = new JPanel(new FlowLayout());
-        statusLabel = new JLabel("Waiting...");
-        statusLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        
-        nextTurnButton = new JButton("Next Move");
-        nextTurnButton.addActionListener(e -> playNextTurn());
+        // --- Top Control Panel ---
+        // CHANGED: Use BorderLayout to put Quit (Back) on Left
+        JPanel controlPanel = new JPanel(new BorderLayout());
         
         quitButton = new JButton("Quit");
         quitButton.addActionListener(e -> {
             SoundManager.getInstance().playSound("click.wav");
             mainApp.showView("HOME");
         });
+        
+        // Center Controls Container
+        JPanel centerControls = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        
+        statusLabel = new JLabel("Waiting...");
+        statusLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        
+        nextTurnButton = new JButton("Next Move");
+        nextTurnButton.addActionListener(e -> playNextTurn());
 
-        controlPanel.add(statusLabel);
-        controlPanel.add(nextTurnButton);
-        controlPanel.add(quitButton);
+        centerControls.add(statusLabel);
+        centerControls.add(nextTurnButton);
+
+        controlPanel.add(quitButton, BorderLayout.WEST);
+        controlPanel.add(centerControls, BorderLayout.CENTER);
+        
         add(controlPanel, BorderLayout.NORTH);
 
-        // Bottom Panel
+        // --- Bottom Info Panel ---
         infoLabel = new JLabel("Game Status");
         infoLabel.setHorizontalAlignment(SwingConstants.CENTER);
         add(infoLabel, BorderLayout.SOUTH);
 
-        // Board Grid
+        // --- Board Grid ---
         boardPanel = new JPanel(new GridLayout(BOARD_SIZE, BOARD_SIZE, 2, 2));
         gridButtons = new JButton[BOARD_SIZE * BOARD_SIZE];
 
