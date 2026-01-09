@@ -1,5 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
+import javax.imageio.ImageIO;
 
 public class SetupPage extends JPanel {
     private MainInterface mainApp;
@@ -25,7 +27,24 @@ public class SetupPage extends JPanel {
         JButton startBtn = new JButton("Start Game");
         startBtn.addActionListener(e -> handleStart());
 
-        JButton backBtn = new JButton("Back");
+        // --- Back Button (Image) ---
+        JButton backBtn = new JButton();
+        try {
+            File imgFile = new File("back_icon.png");
+            if (imgFile.exists()) {
+                ImageIcon icon = new ImageIcon(ImageIO.read(imgFile));
+                Image scaled = icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+                backBtn.setIcon(new ImageIcon(scaled));
+                backBtn.setBorderPainted(false);
+                backBtn.setContentAreaFilled(false);
+                backBtn.setFocusPainted(false);
+            } else {
+                backBtn.setText("Back");
+            }
+        } catch (Exception e) {
+            backBtn.setText("Back");
+        }
+        
         backBtn.addActionListener(e -> mainApp.showView("PLAY_SELECTION"));
 
         // Layout
