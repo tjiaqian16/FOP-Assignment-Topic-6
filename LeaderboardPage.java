@@ -1,6 +1,8 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.io.File;
+import javax.imageio.ImageIO;
 
 public class LeaderboardPage extends BackgroundImagePanel {
     private MainInterface mainApp;
@@ -26,7 +28,24 @@ public class LeaderboardPage extends BackgroundImagePanel {
         JTable table = new JTable(new DefaultTableModel(data, columns));
         add(new JScrollPane(table), BorderLayout.CENTER);
 
-        JButton backBtn = new JButton("Back to Menu");
+        // --- Back Button with Image ---
+        JButton backBtn = new JButton();
+        try {
+            File imgFile = new File("back_icon.png");
+            if (imgFile.exists()) {
+                ImageIcon icon = new ImageIcon(ImageIO.read(imgFile));
+                Image scaled = icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+                backBtn.setIcon(new ImageIcon(scaled));
+                backBtn.setBorderPainted(false);
+                backBtn.setContentAreaFilled(false);
+                backBtn.setFocusPainted(false);
+            } else {
+                backBtn.setText("Back to Menu");
+            }
+        } catch (Exception e) {
+            backBtn.setText("Back to Menu");
+        }
+
         backBtn.addActionListener(e -> {
             SoundManager.getInstance().playSound("click.wav");
             mainApp.showView("HOME");
