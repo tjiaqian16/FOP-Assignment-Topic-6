@@ -3,28 +3,69 @@ import java.awt.*;
 import java.io.File;
 import javax.imageio.ImageIO;
 
-public class SetupPage extends JPanel {
+public class SetupPage extends BackgroundImagePanel { 
     private MainInterface mainApp;
     private JTextField nameField;
     private JLabel nameLabel;
-    private JComboBox<String> levelSelector;
+    private JSlider levelSlider; 
 
     public SetupPage(MainInterface app) {
+        // CHANGED: Uses "setup_bg.jpg" specifically for this page. 
+        // Ensure you add this image file to your project folder.
+        super("setup_bg.jpg"); 
+        
         this.mainApp = app;
         setLayout(new GridBagLayout());
-        setBackground(new Color(230, 240, 255));
-
-        JLabel titleLabel = new JLabel("Game Setup");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-
-        nameLabel = new JLabel("Player Name:");
+        
+        // --- 1. Player Name Input ---
+        nameLabel = new JLabel("Enter Player's Name: ");
+        nameLabel.setFont(new Font("SansSerif", Font.BOLD, 20));
+        nameLabel.setForeground(Color.WHITE); 
+        
         nameField = new JTextField(15);
+        nameField.setFont(new Font("SansSerif", Font.PLAIN, 18));
 
+        // --- 2. Level Selection (Slider) ---
         JLabel levelLabel = new JLabel("Select Level:");
-        String[] levels = {"Level 1", "Level 2", "Level 3", "Level 4"};
-        levelSelector = new JComboBox<>(levels);
+        levelLabel.setFont(new Font("SansSerif", Font.BOLD, 20));
+        levelLabel.setForeground(Color.WHITE);
 
-        JButton startBtn = new JButton("Start Game");
+        levelSlider = new JSlider(JSlider.HORIZONTAL, 1, 4, 1);
+        levelSlider.setMajorTickSpacing(1);
+        levelSlider.setPaintTicks(true);
+        levelSlider.setPaintLabels(true);
+        levelSlider.setSnapToTicks(true);
+        levelSlider.setOpaque(false); 
+        levelSlider.setForeground(Color.WHITE);
+        levelSlider.setFont(new Font("SansSerif", Font.BOLD, 16));
+        levelSlider.setPreferredSize(new Dimension(300, 80));
+
+        // --- 3. Start Game Button (Image) ---
+        JButton startBtn = new JButton();
+        try {
+            // Ensure "start_icon.png" exists in your folder
+            File imgFile = new File("start_icon.png"); 
+            if (imgFile.exists()) {
+                ImageIcon icon = new ImageIcon(ImageIO.read(imgFile));
+                if (icon.getIconWidth() > 200) {
+                     Image scaled = icon.getImage().getScaledInstance(200, -1, Image.SCALE_SMOOTH);
+                     icon = new ImageIcon(scaled);
+                }
+                startBtn.setIcon(icon);
+                startBtn.setBorderPainted(false);
+                startBtn.setContentAreaFilled(false);
+                startBtn.setFocusPainted(false);
+                startBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            } else {
+                startBtn.setText("START GAME");
+                startBtn.setFont(new Font("SansSerif", Font.BOLD, 24));
+                startBtn.setBackground(new Color(46, 204, 113));
+                startBtn.setForeground(Color.WHITE);
+                startBtn.setPreferredSize(new Dimension(200, 60));
+            }
+        } catch (Exception e) {
+            startBtn.setText("START");
+        }
         startBtn.addActionListener(e -> handleStart());
 
         // --- Back Button (Image) ---
@@ -33,43 +74,52 @@ public class SetupPage extends JPanel {
             File imgFile = new File("back_icon.png");
             if (imgFile.exists()) {
                 ImageIcon icon = new ImageIcon(ImageIO.read(imgFile));
-                Image scaled = icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+                Image scaled = icon.getImage().getScaledInstance(60, 60, Image.SCALE_SMOOTH);
                 backBtn.setIcon(new ImageIcon(scaled));
                 backBtn.setBorderPainted(false);
                 backBtn.setContentAreaFilled(false);
                 backBtn.setFocusPainted(false);
+                backBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
             } else {
                 backBtn.setText("Back");
             }
         } catch (Exception e) {
             backBtn.setText("Back");
         }
-        
-        backBtn.addActionListener(e -> mainApp.showView("PLAY_SELECTION"));
+        backBtn.addActionListener(e -> {
+            SoundManager.getInstance().playSound("click.wav");
+            mainApp.showView("PLAY_SELECTION");
+        });
 
-        // Layout
+        // --- Layout ---
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
-        add(titleLabel, gbc);
-
-        gbc.gridwidth = 1; gbc.gridy = 1;
+        gbc.insets = new Insets(15, 10, 15, 10);
+        
+        gbc.gridx = 0; gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
         add(nameLabel, gbc);
-        gbc.gridx = 1; add(nameField, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 2;
+        gbc.gridy = 1;
+        add(nameField, gbc);
+
+        gbc.gridy = 2;
+        gbc.insets = new Insets(30, 10, 5, 10); 
         add(levelLabel, gbc);
-        gbc.gridx = 1; add(levelSelector, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2;
-        JPanel btnPanel = new JPanel();
+        gbc.gridy = 3;
+        gbc.insets = new Insets(0, 10, 30, 10);
+        add(levelSlider, gbc);
+
+        gbc.gridy = 4;
+        gbc.insets = new Insets(10, 10, 10, 10);
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 50, 0));
         btnPanel.setOpaque(false);
         btnPanel.add(backBtn);
         btnPanel.add(startBtn);
         add(btnPanel, gbc);
     }
 
-    // Update UI when this page is shown
     @Override
     public void setVisible(boolean aFlag) {
         super.setVisible(aFlag);
@@ -99,7 +149,7 @@ public class SetupPage extends JPanel {
             name = "AIPlayer";
         }
 
-        int level = levelSelector.getSelectedIndex() + 1;
+        int level = levelSlider.getValue();
         mainApp.startGame(name, level);
     }
 }
