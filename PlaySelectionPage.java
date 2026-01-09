@@ -22,8 +22,6 @@ public class PlaySelectionPage extends BackgroundImagePanel {
             File imgFile = new File("select_mode.png");
             if (imgFile.exists()) {
                 ImageIcon titleIcon = new ImageIcon(ImageIO.read(imgFile));
-                
-                // Scale if too wide
                 int targetWidth = 500;
                 if (titleIcon.getIconWidth() > targetWidth) {
                     int newHeight = (targetWidth * titleIcon.getIconHeight()) / titleIcon.getIconWidth();
@@ -32,11 +30,9 @@ public class PlaySelectionPage extends BackgroundImagePanel {
                 }
                 titleLabel.setIcon(titleIcon);
             } else {
-                // Fallback Text
                 titleLabel.setText("Select Mode");
                 titleLabel.setFont(new Font("SansSerif", Font.BOLD | Font.ITALIC, 45)); 
                 titleLabel.setForeground(Color.WHITE);
-                System.out.println("File 'select_mode.png' not found. Using text fallback.");
             }
         } catch (Exception e) {
             titleLabel.setText("Select Mode");
@@ -48,15 +44,33 @@ public class PlaySelectionPage extends BackgroundImagePanel {
         JButton randomBtn = createModeButton("Random Player");
         JButton aiBtn = createModeButton("AI Player");
 
-        // Actions
         humanBtn.addActionListener(e -> selectMode(1));
         randomBtn.addActionListener(e -> selectMode(2));
         aiBtn.addActionListener(e -> selectMode(3));
 
-        // Bottom Navigation
+        // --- 3. Bottom Navigation (Back Image Button) ---
         JPanel bottomPanel = new JPanel(new FlowLayout());
         bottomPanel.setOpaque(false);
-        JButton backBtn = new JButton("Back");
+        
+        JButton backBtn = new JButton();
+        // Try to load back_icon.png
+        try {
+            File imgFile = new File("back_icon.png");
+            if (imgFile.exists()) {
+                ImageIcon icon = new ImageIcon(ImageIO.read(imgFile));
+                // Resize to 50x50 (adjust as needed)
+                Image scaled = icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+                backBtn.setIcon(new ImageIcon(scaled));
+                backBtn.setBorderPainted(false);
+                backBtn.setContentAreaFilled(false);
+                backBtn.setFocusPainted(false);
+            } else {
+                backBtn.setText("Back"); // Fallback text
+            }
+        } catch (Exception e) {
+            backBtn.setText("Back");
+        }
+
         backBtn.addActionListener(e -> {
             soundManager.playSound("click.wav");
             mainApp.showView("HOME");
@@ -88,14 +102,10 @@ public class PlaySelectionPage extends BackgroundImagePanel {
         return btn;
     }
 
-    /**
-     * Custom Button Class (Deep Blue Theme - Complementary to Orange)
-     */
     private static class RoundedButton extends JButton {
-        // UPDATED: Deep Royal Blue theme
-        private Color normalColor = new Color(0, 70, 140);   // Rich Royal Blue
-        private Color hoverColor = new Color(30, 100, 180);  // Brighter Blue
-        private Color pressedColor = new Color(0, 40, 90);   // Dark Navy
+        private Color normalColor = new Color(0, 70, 140);
+        private Color hoverColor = new Color(30, 100, 180);
+        private Color pressedColor = new Color(0, 40, 90);
         
         private boolean isHovered = false;
         private boolean isPressed = false;
@@ -107,7 +117,6 @@ public class PlaySelectionPage extends BackgroundImagePanel {
             setBorderPainted(false);
             setForeground(Color.WHITE);
             setCursor(new Cursor(Cursor.HAND_CURSOR));
-
             addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseEntered(MouseEvent e) { isHovered = true; repaint(); }
@@ -124,20 +133,13 @@ public class PlaySelectionPage extends BackgroundImagePanel {
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-            // Draw Shadow (Dark Blue tint)
             g2.setColor(new Color(0, 20, 60, 150)); 
             g2.fillRoundRect(0, 8, getWidth(), getHeight() - 8, 40, 40);
-
-            // Draw Button Body
             if (isPressed) g2.setColor(pressedColor);
             else if (isHovered) g2.setColor(hoverColor);
             else g2.setColor(normalColor);
-            
             int yOffset = isPressed ? 4 : 0;
             g2.fillRoundRect(0, yOffset, getWidth(), getHeight() - 8, 40, 40);
-
-            // Draw Text
             super.paintComponent(g2);
             g2.dispose();
         }
