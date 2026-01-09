@@ -1,5 +1,9 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.File;
+import javax.imageio.ImageIO;
 
 public class PlaySelectionPage extends BackgroundImagePanel {
     private MainInterface mainApp;
@@ -12,15 +16,39 @@ public class PlaySelectionPage extends BackgroundImagePanel {
 
         setLayout(new GridBagLayout());
 
-        JLabel titleLabel = new JLabel("Select Opponent");
-        titleLabel.setFont(new Font("Serif", Font.BOLD, 40));
-        titleLabel.setForeground(Color.WHITE);
+        // --- 1. Title Section (Image with Fallback) ---
+        JLabel titleLabel = new JLabel();
+        try {
+            File imgFile = new File("select_mode.png");
+            if (imgFile.exists()) {
+                ImageIcon titleIcon = new ImageIcon(ImageIO.read(imgFile));
+                
+                // Scale if too wide
+                int targetWidth = 500;
+                if (titleIcon.getIconWidth() > targetWidth) {
+                    int newHeight = (targetWidth * titleIcon.getIconHeight()) / titleIcon.getIconWidth();
+                    Image scaledImg = titleIcon.getImage().getScaledInstance(targetWidth, newHeight, Image.SCALE_SMOOTH);
+                    titleIcon = new ImageIcon(scaledImg);
+                }
+                titleLabel.setIcon(titleIcon);
+            } else {
+                // Fallback Text
+                titleLabel.setText("Select Mode");
+                titleLabel.setFont(new Font("SansSerif", Font.BOLD | Font.ITALIC, 45)); 
+                titleLabel.setForeground(Color.WHITE);
+                System.out.println("File 'select_mode.png' not found. Using text fallback.");
+            }
+        } catch (Exception e) {
+            titleLabel.setText("Select Mode");
+            titleLabel.setForeground(Color.WHITE);
+        }
 
+        // --- 2. Button Section ---
         JButton humanBtn = createModeButton("Human Player");
         JButton randomBtn = createModeButton("Random Player");
         JButton aiBtn = createModeButton("AI Player");
 
-        // Set Mode and Go to Setup
+        // Actions
         humanBtn.addActionListener(e -> selectMode(1));
         randomBtn.addActionListener(e -> selectMode(2));
         aiBtn.addActionListener(e -> selectMode(3));
@@ -35,7 +63,7 @@ public class PlaySelectionPage extends BackgroundImagePanel {
         });
         bottomPanel.add(backBtn);
 
-        // Layout
+        // --- Layout Constraints ---
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(15, 0, 15, 0);
         gbc.gridx = 0;
@@ -54,11 +82,64 @@ public class PlaySelectionPage extends BackgroundImagePanel {
     }
 
     private JButton createModeButton(String text) {
-        JButton btn = new JButton(text);
-        btn.setPreferredSize(new Dimension(300, 60));
-        btn.setFont(new Font("SansSerif", Font.BOLD, 20));
-        btn.setBackground(new Color(255, 255, 255, 220));
-        btn.setFocusPainted(false);
+        RoundedButton btn = new RoundedButton(text);
+        btn.setPreferredSize(new Dimension(300, 70));
+        btn.setFont(new Font("SansSerif", Font.BOLD, 24));
         return btn;
+    }
+
+    /**
+     * Custom Button Class (Deep Blue Theme - Complementary to Orange)
+     */
+    private static class RoundedButton extends JButton {
+        // UPDATED: Deep Royal Blue theme
+        private Color normalColor = new Color(0, 70, 140);   // Rich Royal Blue
+        private Color hoverColor = new Color(30, 100, 180);  // Brighter Blue
+        private Color pressedColor = new Color(0, 40, 90);   // Dark Navy
+        
+        private boolean isHovered = false;
+        private boolean isPressed = false;
+
+        public RoundedButton(String text) {
+            super(text);
+            setContentAreaFilled(false);
+            setFocusPainted(false);
+            setBorderPainted(false);
+            setForeground(Color.WHITE);
+            setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+            addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) { isHovered = true; repaint(); }
+                @Override
+                public void mouseExited(MouseEvent e) { isHovered = false; isPressed = false; repaint(); }
+                @Override
+                public void mousePressed(MouseEvent e) { isPressed = true; repaint(); }
+                @Override
+                public void mouseReleased(MouseEvent e) { isPressed = false; repaint(); }
+            });
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            // Draw Shadow (Dark Blue tint)
+            g2.setColor(new Color(0, 20, 60, 150)); 
+            g2.fillRoundRect(0, 8, getWidth(), getHeight() - 8, 40, 40);
+
+            // Draw Button Body
+            if (isPressed) g2.setColor(pressedColor);
+            else if (isHovered) g2.setColor(hoverColor);
+            else g2.setColor(normalColor);
+            
+            int yOffset = isPressed ? 4 : 0;
+            g2.fillRoundRect(0, yOffset, getWidth(), getHeight() - 8, 40, 40);
+
+            // Draw Text
+            super.paintComponent(g2);
+            g2.dispose();
+        }
     }
 }
