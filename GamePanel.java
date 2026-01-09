@@ -2,6 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.List;
 import java.io.File;
+import java.util.ArrayList;
 
 public class GamePanel extends JPanel {
     private MainInterface mainApp;
@@ -22,15 +23,22 @@ public class GamePanel extends JPanel {
     private int currentLevel;
     private boolean gameEnded = false;
 
-    // --- CONNECTION TO HUMAN PLAYER ---
-    private HumanPlayer humanPlayer; // The backend logic class
+    // --- PLAYER LOGIC CONNECTORS ---
+    private HumanPlayer humanPlayer;   // For Mode 1
+    private RandomPlayer randomPlayer; // For Mode 2 (NEW)
+    private AIPlayer aiPlayer;         // For Mode 3
+    
     private boolean isHumanTurn = false;
 
     private static final int BOARD_SIZE = 10;
 
     public GamePanel(MainInterface app) {
         this.mainApp = app;
-        this.humanPlayer = new HumanPlayer(); // Initialize the logic class
+        
+        // Initialize Player Helpers
+        this.humanPlayer = new HumanPlayer();
+        this.randomPlayer = new RandomPlayer(); 
+        // AIPlayer is initialized per turn or level usually, but can be done here if stateless
 
         setLayout(new BorderLayout(10, 10));
 
@@ -43,6 +51,7 @@ public class GamePanel extends JPanel {
             mainApp.showView("HOME");
         });
         
+        // Center Controls
         JPanel centerControls = new JPanel(new FlowLayout(FlowLayout.CENTER));
         statusLabel = new JLabel("Waiting...");
         statusLabel.setFont(new Font("Arial", Font.BOLD, 14));
@@ -70,7 +79,7 @@ public class GamePanel extends JPanel {
             btn.setBackground(Color.LIGHT_GRAY);
             btn.setEnabled(false);
             
-            // CONNECT INTERFACE TO BACKEND
+            // Connect Clicks to Human Player Logic
             int finalIndex = i;
             btn.addActionListener(e -> handleGridClick(finalIndex)); 
             
@@ -114,6 +123,7 @@ public class GamePanel extends JPanel {
         if (gameEnded) return;
         SoundManager.getInstance().playSound("click.wav");
 
+        // Check Turn Limit
         if (currentTurn >= 30 || currentTurn >= loader.diceSequence.size()) {
             endGame(false, "Game Over! Turn limit reached.");
             return;
@@ -129,29 +139,39 @@ public class GamePanel extends JPanel {
             return;
         }
 
-        // --- USE HUMAN PLAYER CLASS ---
-        if (mainApp.getGameMode() == 1) { 
-            startHumanTurn(dice, moves);
-            return; 
-        } 
-        
-        // --- AI / RANDOM LOGIC ---
+        int mode = mainApp.getGameMode();
         int chosenMove = -1;
-        if (mainApp.getGameMode() == 2) {
-            chosenMove = moves.get(new java.util.Random().nextInt(moves.size()));
-        } else {
-            AIPlayer ai = new AIPlayer(gameState.targetPiece);
-            chosenMove = ai.chooseMove(moves, currentPositions);
+
+        // --- MODE SELECTION LOGIC ---
+        if (mode == 1) { 
+            // MODE 1: HUMAN (Interactive)
+            startHumanTurn(dice, moves);
+            return; // Wait for user click
+        } 
+        else if (mode == 2) {
+            // MODE 2: RANDOM PLAYER (Fixed!)
+            // Previously this block was missing/using AI
+            chosenMove = randomPlayer.chooseMove(moves);
+            
+            // Note: If dice are fixed from file, the game might still *feel* similar,
+            // but the choices made here are now genuinely random.
+        } 
+        else {
+            // MODE 3: AI PLAYER
+            aiPlayer = new AIPlayer(gameState.targetPiece);
+            chosenMove = aiPlayer.chooseMove(moves, currentPositions);
         }
 
-        executeMove(chosenMove / 100, chosenMove % 100);
-        finishTurn();
+        // Execute Computer/Random Move
+        if (chosenMove != -1) {
+            executeMove(chosenMove / 100, chosenMove % 100);
+            finishTurn();
+        }
     }
 
+    // --- HUMAN PLAYER LOGIC (Delegated to HumanPlayer.java) ---
     private void startHumanTurn(int dice, List<Integer> moves) {
         this.isHumanTurn = true;
-        
-        // Delegate state setup to HumanPlayer.java
         humanPlayer.setCurrentMoves(moves);
         
         infoLabel.setText("Your Turn! Dice: " + dice + ". Select a highlighted Piece.");
@@ -161,7 +181,6 @@ public class GamePanel extends JPanel {
 
     private void highlightValidPieces() {
         updateBoard();
-        // Ask HumanPlayer which pieces can move
         for (int i = 0; i < currentPositions.length; i++) {
             int pos = currentPositions[i];
             int pieceId = i + 1;
@@ -178,13 +197,12 @@ public class GamePanel extends JPanel {
 
         int clickedPieceId = getPieceAt(index);
 
-        // 1. Try to Select a Piece (Delegate to HumanPlayer)
+        // 1. Select Piece
         if (clickedPieceId != -1 && humanPlayer.selectPiece(clickedPieceId)) {
-            // Highlighting Visuals
             highlightValidPieces();
             gridButtons[index].setBackground(new Color(255, 200, 0)); // Orange Selected
             
-            // Highlight Destinations
+            // Show Destinations
             for (int r = 0; r < BOARD_SIZE * BOARD_SIZE; r++) {
                 if (humanPlayer.isValidDestination(r)) {
                     gridButtons[r].setBackground(new Color(100, 255, 100)); // Green
@@ -196,16 +214,16 @@ public class GamePanel extends JPanel {
             return;
         }
 
-        // 2. Try to Move to a Destination (Delegate to HumanPlayer)
+        // 2. Move Piece
         if (humanPlayer.isValidDestination(index)) {
             executeMove(humanPlayer.getSelectedPiece(), index);
-            
             isHumanTurn = false;
             nextTurnButton.setEnabled(true);
             finishTurn();
         }
     }
 
+    // --- UTILITIES ---
     private int getPieceAt(int index) {
         for (int i = 0; i < currentPositions.length; i++) {
             if (currentPositions[i] == index) return i + 1;
