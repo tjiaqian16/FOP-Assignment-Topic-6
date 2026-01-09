@@ -5,8 +5,7 @@ public class HumanPlayer extends Player {
     // Console Input
     private Scanner scanner;
 
-    // --- GUI STATE FIELDS ---
-    // These store the current situation for the Interface
+    // GUI State
     private List<Integer> currentPossibleMoves;
     private int selectedPiece = -1;
 
@@ -14,9 +13,7 @@ public class HumanPlayer extends Player {
         this.scanner = new Scanner(System.in);
     }
 
-    // ---------------------------------------------------------
-    // 1. CONSOLE METHOD (Keeps GameMain.java working)
-    // ---------------------------------------------------------
+    // 1. CONSOLE METHOD (Delegated)
     public int chooseMove(List<Integer> possibleMoves) {
         System.out.println("--- Human Player's Turn ---");
         System.out.println("Available Moves:");
@@ -37,21 +34,18 @@ public class HumanPlayer extends Player {
         return possibleMoves.get(choice);
     }
 
-    // ---------------------------------------------------------
-    // 2. GUI METHODS (Connects to GamePanel)
-    // ---------------------------------------------------------
-    
-    /**
-     * Called by GamePanel when a new turn starts.
-     */
-    public void setCurrentMoves(List<Integer> moves) {
-        this.currentPossibleMoves = moves;
-        this.selectedPiece = -1; // Reset selection
+    // Satisfy Player Abstract Class
+    @Override
+    public int chooseMove(List<Integer> possibleMoves, int[] currentPositions) {
+        return chooseMove(possibleMoves);
     }
 
-    /**
-     * Checks if a specific piece (1-6) is allowed to be selected.
-     */
+    // 2. GUI METHODS
+    public void setCurrentMoves(List<Integer> moves) {
+        this.currentPossibleMoves = moves;
+        this.selectedPiece = -1; 
+    }
+
     public boolean canPieceMove(int pieceId) {
         if (currentPossibleMoves == null) return false;
         for (int move : currentPossibleMoves) {
@@ -60,9 +54,6 @@ public class HumanPlayer extends Player {
         return false;
     }
 
-    /**
-     * Attempts to select a piece. Returns true if valid.
-     */
     public boolean selectPiece(int pieceId) {
         if (canPieceMove(pieceId)) {
             this.selectedPiece = pieceId;
@@ -75,9 +66,6 @@ public class HumanPlayer extends Player {
         return selectedPiece;
     }
 
-    /**
-     * Checks if the clicked square is a valid destination for the selected piece.
-     */
     public boolean isValidDestination(int destIndex) {
         if (selectedPiece == -1 || currentPossibleMoves == null) return false;
         for (int move : currentPossibleMoves) {

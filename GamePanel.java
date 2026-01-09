@@ -2,7 +2,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.List;
 import java.io.File;
-import java.util.ArrayList;
 
 public class GamePanel extends JPanel {
     private MainInterface mainApp;

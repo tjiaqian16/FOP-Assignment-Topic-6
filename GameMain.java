@@ -5,29 +5,28 @@ public class GameMain {
     public static void main(String[] args) throws Exception {
         Scanner input = new Scanner(System.in);
         
-        // 1. Prompt user for player mode with validation
+        // 1. Prompt user for player mode
         int mode = -1;
         while (true) {
             System.out.print("Select Mode (1: Human Player, 2: Random Player, 3: AI Player): ");
             if (input.hasNextInt()) {
                 mode = input.nextInt();
                 if (mode >= 1 && mode <= 3) {
-                    input.nextLine(); // Clear the newline character from the buffer
+                    input.nextLine(); 
                     break; 
                 }
             } else {
-                input.next(); // Clear invalid non-integer input
+                input.next(); 
             }
             System.out.println("Invalid choice. Please enter 1, 2, or 3.");
         }
         
-        // 2. Prompt for player name based on mode
+        // 2. Prompt for player name 
         String playerName;
         if (mode == 1) {
             while (true) {
                 System.out.print("Enter the name of the human player (letters, digits and spaces only): ");
                 playerName = input.nextLine();
-                // Updated Regex to allow spaces: [a-zA-Z0-9 ]
                 if (playerName.matches("^[a-zA-Z0-9 ]+$")) {
                     break;
                 } else {
@@ -40,7 +39,7 @@ public class GameMain {
             playerName = "AIPlayer";
         }
 
-        // 3. Prompt user for level number with validation
+        // 3. Prompt for level
         int levelNum = -1;
         while (true) {
             System.out.print("Enter the level number (1, 2, 3, or 4): ");
@@ -50,7 +49,7 @@ public class GameMain {
                     break; 
                 }
             } else {
-                input.next(); // Clear the buffer
+                input.next(); 
             }
             System.out.println("Invalid level. Please enter a number between 1 and 4.");
         }
@@ -63,13 +62,22 @@ public class GameMain {
         game.targetPiece = loader.targetPiece;
         int[] currentPositions = loader.initialPositions.clone();
 
-        // Start Announcement
+        // 4. Create Player Object (Polymorphism)
+        // This fulfills Requirement 8 explicitly
+        Player player;
+        if (mode == 1) {
+            player = new HumanPlayer();
+        } else if (mode == 2) {
+            player = new RandomPlayer();
+        } else {
+            player = new AIPlayer(game.targetPiece);
+        }
+
         System.out.println("\n========================================");
         System.out.println("GAME STARTING: Target Piece is " + game.targetPiece);
         System.out.println("Goal: Reach Square 0 in 30 moves.");
         System.out.println("========================================\n");
 
-        // Initialize output file
         PrintWriter writer = new PrintWriter(new FileWriter("moves.txt"));
         loader.printGameDetails(playerName, writer);
 
@@ -77,12 +85,11 @@ public class GameMain {
         boolean targetCaptured = false;
         int maxMoves = 30;
 
-        // Game loop: Max 30 moves
+        // Game loop
         for (int turn = 0; turn < maxMoves && turn < loader.diceSequence.size(); turn++) {
             int remainingMoves = maxMoves - turn;
             System.out.println("--- Turn " + (turn + 1) + " | Moves Remaining: " + remainingMoves + " ---");
 
-            // Pre-turn check: is target still on board?
             if (currentPositions[game.targetPiece - 1] == -1) {
                 targetCaptured = true;
                 break;
@@ -96,29 +103,19 @@ public class GameMain {
                 break;
             }
 
-            int chosenMove = -1;
+            // 5. Call chooseMove via Player interface
+            // This works for Human, Random, and AI uniformly
+            int chosenMove = player.chooseMove(moves, currentPositions);
 
-            // 4. Obtain moves from selected player
-            if (mode == 1) {
-                HumanPlayer hp = new HumanPlayer();
-                chosenMove = hp.chooseMove(moves);
-            } else if (mode == 2) {
-                RandomPlayer rp = new RandomPlayer();
-                chosenMove = rp.chooseMove(moves);
-                System.out.println("Random Player chose Piece " + (chosenMove / 100) + " to Square " + (chosenMove % 100));
-                System.out.println();
-            } else if (mode == 3) {
-                AIPlayer ai = new AIPlayer(game.targetPiece);
-                chosenMove = ai.chooseMove(moves, currentPositions);
-                System.out.println("AI chose Piece " + (chosenMove / 100) + " to Square " + (chosenMove % 100));
+            if (mode != 1) {
+                System.out.println((mode == 2 ? "Random Player" : "AI") + " chose Piece " + (chosenMove / 100) + " to Square " + (chosenMove % 100));
                 System.out.println();
             }
 
-            // 5. Execute move logic
+            // Execute move
             int pieceToMove = chosenMove / 100;
             int destination = chosenMove % 100;
 
-            // Capture logic
             for (int i = 0; i < 6; i++) {
                 if (currentPositions[i] == destination) {
                     currentPositions[i] = -1; 
@@ -126,20 +123,15 @@ public class GameMain {
             }
             currentPositions[pieceToMove - 1] = destination;
 
-            // 6. Log positions to moves.txt
-            for (int i = 0; i < 6; i++) {
-                writer.print(currentPositions[i] + (i == 5 ? "" : " "));
-            }
-            writer.println();
-            writer.flush();
+            // 6. Log positions using player.printMove()
+            // This fulfills Requirement 7 explicitly
+            player.printMove(currentPositions, writer);
 
-            // 7. Check winning condition
             if (game.isWinning(currentPositions)) {
                 won = true;
                 break;
             }
 
-            // 8. Post-move check: was target just captured?
             if (currentPositions[game.targetPiece - 1] == -1) {
                 targetCaptured = true;
                 break;
@@ -148,7 +140,7 @@ public class GameMain {
         
         writer.close();
 
-        // 9. Show final results
+        // Show results
         System.out.println("========================================");
         if (won) {
             System.out.println("CONGRATULATIONS! Puzzle solved successfully.");
