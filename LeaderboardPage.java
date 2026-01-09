@@ -2,6 +2,7 @@ import javax.swing.*;
 import javax.swing.table.*;
 import java.awt.*;
 import java.io.*;
+import java.util.*;
 import javax.imageio.ImageIO;
 
 public class LeaderboardPage extends BackgroundImagePanel {
@@ -185,17 +186,75 @@ public class LeaderboardPage extends BackgroundImagePanel {
         File file = new File(FILE_NAME);
         if (!file.exists()) return;
 
+        java.util.List<LeaderboardEntry> entries = new ArrayList<>();
+        Set<String> uniqueEntries = new HashSet<>();
+
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
-            int rank = 1;
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",");
                 if (parts.length == 3) {
-                    tableModel.addRow(new Object[]{String.valueOf(rank++), parts[0], "Level " + parts[1], parts[2]});
+                    String name = parts[0].trim();
+                    String levelStr = parts[1].trim();
+                    String result = parts[2].trim();
+
+                    // --- NEW: Filter out Non-Human Players ---
+                    if (name.equalsIgnoreCase("RandomPlayer") || name.equalsIgnoreCase("AIPlayer")) {
+                        continue; 
+                    }
+                    
+                    // Create unique key to filter exact duplicates
+                    String uniqueKey = name.toLowerCase() + "|" + levelStr + "|" + result.toLowerCase();
+                    
+                    if (!uniqueEntries.contains(uniqueKey)) {
+                        uniqueEntries.add(uniqueKey);
+                        try {
+                            int level = Integer.parseInt(levelStr);
+                            entries.add(new LeaderboardEntry(name, level, result));
+                        } catch (NumberFormatException e) {
+                            // Skip invalid lines
+                        }
+                    }
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
+        }
+
+        // Sort: 
+        // 1. "Won" > "Lost"
+        // 2. Level Descending (High > Low)
+        // 3. Name Alphabetical
+        Collections.sort(entries, new Comparator<LeaderboardEntry>() {
+            @Override
+            public int compare(LeaderboardEntry e1, LeaderboardEntry e2) {
+                // Result comparison (Won comes first)
+                boolean p1Won = "Won".equalsIgnoreCase(e1.result);
+                boolean p2Won = "Won".equalsIgnoreCase(e2.result);
+                
+                if (p1Won && !p2Won) return -1;
+                if (!p1Won && p2Won) return 1;
+
+                // Level comparison (Descending)
+                if (e1.level != e2.level) {
+                    return Integer.compare(e2.level, e1.level); 
+                }
+
+                // Name comparison (Alphabetical)
+                return e1.name.compareToIgnoreCase(e2.name);
+            }
+        });
+
+        // Add to Table
+        int rankCounter = 1;
+        for (LeaderboardEntry e : entries) {
+            String rankStr;
+            if ("Won".equalsIgnoreCase(e.result)) {
+                rankStr = String.valueOf(rankCounter++);
+            } else {
+                rankStr = "-";
+            }
+            tableModel.addRow(new Object[]{rankStr, e.name, "Level " + e.level, e.result});
         }
     }
 
@@ -207,5 +266,18 @@ public class LeaderboardPage extends BackgroundImagePanel {
             e.printStackTrace();
         }
         loadLeaderboard();
+    }
+
+    // Helper class for sorting
+    private static class LeaderboardEntry {
+        String name;
+        int level;
+        String result;
+
+        public LeaderboardEntry(String name, int level, String result) {
+            this.name = name;
+            this.level = level;
+            this.result = result;
+        }
     }
 }
