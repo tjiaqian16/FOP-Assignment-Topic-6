@@ -4,11 +4,15 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.List;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.PrintWriter;
+
 import javax.imageio.ImageIO;
 
 public class GamePanel extends BackgroundImagePanel {
     private MainInterface mainApp;
-    
+    private PrintWriter gameFileWriter;
+
     // --- Components ---
     private JPanel boardPanel;
     private JLabel statusLabel;
@@ -146,7 +150,7 @@ public class GamePanel extends BackgroundImagePanel {
 
         // --- Next Turn Button ---
         nextTurnButton = new RoundedButton("Start Game");
-        nextTurnButton.setPreferredSize(new Dimension(140, 80)); 
+        nextTurnButton.setPreferredSize(new Dimension(180, 80)); 
         nextTurnButton.addActionListener(e -> playNextTurn());
 
         gbc.gridx = 1;
@@ -212,6 +216,9 @@ public class GamePanel extends BackgroundImagePanel {
             
             updateBoard();
 
+            gameFileWriter = new PrintWriter(new FileWriter("moves.txt"));
+            loader.printGameDetails(playerName, gameFileWriter);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -219,12 +226,15 @@ public class GamePanel extends BackgroundImagePanel {
 
     private void updateMovesLeftLabel() {
         if (loader == null) return;
-        int totalAvailable = Math.min(MAX_GAME_MOVES, loader.diceSequence.size());
-        int left = Math.max(0, totalAvailable - currentTurn);
-        
+    
+        // Use the constant MAX_GAME_MOVES (30) as the base
+        int left = MAX_GAME_MOVES - currentTurn;
+    
+        // Ensure the counter doesn't go below zero
+        if (left < 0) left = 0;
         movesLeftLabel.setText("Moves Left: " + left);
         
-        // Optional: Change color if running low
+        // Visual cue for low moves
         if (left <= 5) {
             movesLeftLabel.setForeground(Color.RED);
         } else {
@@ -364,11 +374,35 @@ public class GamePanel extends BackgroundImagePanel {
             if (currentPositions[i] == destination) currentPositions[i] = -1;
         }
         currentPositions[pieceToMove - 1] = destination;
+
+        if (gameFileWriter != null) {
+            recordMoveToFile();
+        }
+    }
+
+    private void recordMoveToFile() {
+        try {
+            if (gameFileWriter != null) {
+                for (int i = 0; i < currentPositions.length; i++) {
+                    gameFileWriter.print(currentPositions[i]);
+                    if (i < currentPositions.length - 1) {
+                        gameFileWriter.print(" ");
+                    }
+                }
+                gameFileWriter.println();
+                gameFileWriter.flush(); 
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void finishTurn() {
         updateBoard();
         nextTurnButton.setEnabled(true);
+
+        currentTurn++; 
+        updateMovesLeftLabel();
 
         if (gameState.isWinning(currentPositions)) {
             endGame(true, "CONGRATULATIONS! Puzzle solved successfully.");
@@ -380,11 +414,6 @@ public class GamePanel extends BackgroundImagePanel {
             return;
         }
 
-        currentTurn++;
-        
-        // --- UPDATE COUNTER ---
-        updateMovesLeftLabel();
-        
         if (mainApp.getGameMode() == 1) {
              nextTurnButton.setText("Roll Dice");
         } else {
@@ -396,6 +425,10 @@ public class GamePanel extends BackgroundImagePanel {
         gameEnded = true;
         nextTurnButton.setEnabled(false);
         
+        if (gameFileWriter != null) {
+            gameFileWriter.close();
+        }
+
         // Update label to show final state (likely 0 or whatever)
         updateMovesLeftLabel();
 
@@ -545,6 +578,7 @@ public class GamePanel extends BackgroundImagePanel {
         soundLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
         ToggleSwitch soundSwitch = new ToggleSwitch(SoundManager.getInstance().isSoundEnabled());
         soundSwitch.addSwitchListener(isOn -> SoundManager.getInstance().setSoundEnabled(isOn));
+
         soundPanel.add(soundLabel, BorderLayout.WEST);
         soundPanel.add(soundSwitch, BorderLayout.EAST);
         content.add(soundPanel);

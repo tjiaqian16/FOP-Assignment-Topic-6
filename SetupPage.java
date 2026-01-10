@@ -140,6 +140,7 @@ public class SetupPage extends BackgroundImagePanel {
     public void setVisible(boolean aFlag) {
         super.setVisible(aFlag);
         if (aFlag) {
+            nameField.setText("");
             int mode = mainApp.getGameMode();
             boolean isHuman = (mode == 1);
             nameLabel.setVisible(isHuman);

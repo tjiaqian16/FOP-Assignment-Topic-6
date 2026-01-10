@@ -66,13 +66,13 @@ public class SettingsPage extends BackgroundImagePanel {
 
         // 1. Music Toggle
         JLabel musicLabel = createLabel("Background Music");
-        ToggleSwitch musicSwitch = new ToggleSwitch(soundManager.isMusicEnabled());
-        musicSwitch.addSwitchListener(isOn -> soundManager.setMusicEnabled(isOn));
-
+        ToggleSwitch musicSwitch = new ToggleSwitch(SoundManager.getInstance().isMusicEnabled());
+        musicSwitch.addSwitchListener(isOn -> SoundManager.getInstance().setMusicEnabled(isOn));
+        
         // 2. Sound Effect Toggle
         JLabel soundLabel = createLabel("Sound Effects");
-        ToggleSwitch soundSwitch = new ToggleSwitch(soundManager.isSoundEnabled());
-        soundSwitch.addSwitchListener(isOn -> soundManager.setSoundEnabled(isOn));
+        ToggleSwitch soundSwitch = new ToggleSwitch(SoundManager.getInstance().isSoundEnabled());
+        soundSwitch.addSwitchListener(isOn -> SoundManager.getInstance().setSoundEnabled(isOn));
 
         // Layout the settings inside the content box
         GridBagConstraints gbc = new GridBagConstraints();

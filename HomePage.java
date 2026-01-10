@@ -47,7 +47,7 @@ public class HomePage extends BackgroundImagePanel {
         JButton playBtn = createRoundedButton("Play");
         JButton leaderboardBtn = createRoundedButton("Leaderboard");
         JButton rulesBtn = createRoundedButton("Game Rules"); 
-        JButton settingBtn = createRoundedButton("Setting");
+        JButton settingBtn = createRoundedButton("Settings");
         JButton exitBtn = createRoundedButton("Exit");
 
         // Actions
@@ -144,10 +144,10 @@ public class HomePage extends BackgroundImagePanel {
                 "   </li>" +
                 "   </ul>" +
                 "</li><br>" +
-                "<li><b>Movement:</b> A piece can move to any of the <b>8 adjacent squares</b> (like a King). Only one move per turn.</li><br>" +
+                "<li><b>Movement:</b> A piece can move to any of the <b>8 adjacent squares</b>. Only one move per turn.</li><br>" +
                 "<li><b>Capturing:</b> If you move to a square occupied by another piece, that piece is <b>captured</b> and removed.</li><br>" +
                 "<li><b>WIN:</b> The Target Piece reaches <b>Square 0</b> within 30 moves.</li>" +
-                "<li><b>LOSE:</b> The Target Piece fails to reach Square 0 after 30 moves.</li>" +
+                "<li><b>LOSE:</b> The Target Piece fails to reach Square 0 after 30 moves or target piece is captured.</li>" +
                 "</ul></body></html>";
 
         JEditorPane rulesPane = new JEditorPane("text/html", rulesHtml);

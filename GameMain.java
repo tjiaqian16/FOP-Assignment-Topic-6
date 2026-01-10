@@ -7,6 +7,7 @@ public class GameMain {
         // 1. Prompt user to choose the mode
         Object[] modeOptions = {"Human Player", "Random Player", "AI Player"};
         int modeChoice = JOptionPane.showOptionDialog(
+            
                 null,
                 "Select Game Mode:",
                 "Game Setup",
@@ -17,8 +18,12 @@ public class GameMain {
                 modeOptions[0]
         );
 
-        // Default to 1 (Human) if closed
-        int mode = (modeChoice == -1) ? 1 : modeChoice + 1;
+        // Check if user clicked Cancel or closed the window (-1)
+        if (modeChoice == JOptionPane.CLOSED_OPTION) {
+            System.out.println("Setup cancelled. Exiting...");
+            System.exit(0); 
+        }
+        int mode = modeChoice + 1; 
 
         // 2. Prompt for Player Name
         String playerName;
@@ -26,15 +31,23 @@ public class GameMain {
             while (true) {
                 playerName = JOptionPane.showInputDialog(null, "Enter Human Player Name:", "Player Setup", JOptionPane.QUESTION_MESSAGE);
                 
-                if (playerName == null || playerName.trim().isEmpty()) {
-                    playerName = "Player"; // Default fallback
-                    break;
+                if (playerName == null) {
+                    System.out.println("Setup cancelled. Exiting...");
+                    System.exit(0); 
                 }
                 
+                playerName = playerName.trim();
+
+                // Check for empty name
+                if (playerName.isEmpty()) {
+                    JOptionPane.showMessageDialog(null, "Name cannot be empty!", "Input Error", JOptionPane.ERROR_MESSAGE);
+                    continue;
+                }
+
                 if (playerName.matches("^[a-zA-Z0-9 ]+$")) {
-                    break;
+                    break; 
                 } else {
-                    JOptionPane.showMessageDialog(null, "Invalid name! Alphanumeric only.", "Error", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(null, "Invalid Name! Use only letters, digits, and spaces.", "Input Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         } else if (mode == 2) {
@@ -55,7 +68,12 @@ public class GameMain {
                 levelOptions,
                 levelOptions[0]
         );
-        int levelNum = (levelChoice == -1) ? 1 : (int) levelOptions[levelChoice];
+
+        if (levelChoice == JOptionPane.CLOSED_OPTION) {
+            System.out.println("Level setup cancelled. Exiting...");
+            System.exit(0);
+        }
+        int levelNum = (int) levelOptions[levelChoice];
 
         // Load Game Data
         String levelFile = "level" + levelNum + ".txt";
