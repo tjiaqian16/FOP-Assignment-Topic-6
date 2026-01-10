@@ -9,12 +9,16 @@ public class SettingsPage extends BackgroundImagePanel {
     private MainInterface mainApp;
     private SoundManager soundManager;
 
+    // 1. Declare switches as class fields so they can be accessed later
+    private ToggleSwitch musicSwitch;
+    private ToggleSwitch soundSwitch;
+
     public SettingsPage(MainInterface app) {
         super("menu_bg.jpg");
         this.mainApp = app;
         this.soundManager = SoundManager.getInstance();
 
-        // CHANGED: Use BorderLayout
+        // Use BorderLayout
         setLayout(new BorderLayout());
 
         // --- Back Button (Top-Left) ---
@@ -64,14 +68,14 @@ public class SettingsPage extends BackgroundImagePanel {
         contentPanel.setBackground(new Color(255, 255, 255, 150)); // Semi-transparent box
         contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 40, 20, 40));
 
-        // 1. Music Toggle
+        // 2. Initialize Music Toggle and assign to field
         JLabel musicLabel = createLabel("Background Music");
-        ToggleSwitch musicSwitch = new ToggleSwitch(SoundManager.getInstance().isMusicEnabled());
+        musicSwitch = new ToggleSwitch(SoundManager.getInstance().isMusicEnabled());
         musicSwitch.addSwitchListener(isOn -> SoundManager.getInstance().setMusicEnabled(isOn));
         
-        // 2. Sound Effect Toggle
+        // 3. Initialize Sound Effect Toggle and assign to field
         JLabel soundLabel = createLabel("Sound Effects");
-        ToggleSwitch soundSwitch = new ToggleSwitch(SoundManager.getInstance().isSoundEnabled());
+        soundSwitch = new ToggleSwitch(SoundManager.getInstance().isSoundEnabled());
         soundSwitch.addSwitchListener(isOn -> SoundManager.getInstance().setSoundEnabled(isOn));
 
         // Layout the settings inside the content box
@@ -94,6 +98,21 @@ public class SettingsPage extends BackgroundImagePanel {
         mainGbc.gridy = 1; centerWrapper.add(contentPanel, mainGbc);
         
         add(centerWrapper, BorderLayout.CENTER);
+    }
+
+    // 4. Override setVisible to refresh state every time the page is shown
+    @Override
+    public void setVisible(boolean aFlag) {
+        super.setVisible(aFlag);
+        if (aFlag) {
+            // Check SoundManager for the current real state and update UI
+            if (musicSwitch != null) {
+                musicSwitch.setState(SoundManager.getInstance().isMusicEnabled());
+            }
+            if (soundSwitch != null) {
+                soundSwitch.setState(SoundManager.getInstance().isSoundEnabled());
+            }
+        }
     }
 
     private JLabel createLabel(String text) {
@@ -131,6 +150,12 @@ public class SettingsPage extends BackgroundImagePanel {
                     }
                 }
             });
+        }
+
+        // 5. Add method to set state programmatically without triggering listener loop
+        public void setState(boolean state) {
+            this.isOn = state;
+            repaint();
         }
 
         public void addSwitchListener(SwitchListener listener) {
