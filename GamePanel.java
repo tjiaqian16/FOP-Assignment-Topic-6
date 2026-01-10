@@ -199,6 +199,7 @@ public class GamePanel extends BackgroundImagePanel {
             currentTurn = 0;
             
             this.aiPlayer = new AIPlayer(this.targetPiece); 
+            this.aiPlayer.setDiceSequence(loader.diceSequence);
             
             this.currentPlayerName = playerName;
             this.currentLevel = levelNum;

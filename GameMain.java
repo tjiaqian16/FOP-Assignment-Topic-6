@@ -66,7 +66,18 @@ public class GameMain {
         game.targetPiece = loader.targetPiece;
         int[] currentPositions = loader.initialPositions.clone();
 
-        Player player = (mode == 1) ? new HumanPlayer() : (mode == 2) ? new RandomPlayer() : new AIPlayer(game.targetPiece);
+        // Inside Step 4: Create Player Object
+        Player player;
+        if (mode == 1) {
+            player = new HumanPlayer(); // Or your Anonymous Inner Class for Console
+        } else if (mode == 2) {
+            player = new RandomPlayer();
+        } else {
+            AIPlayer ai = new AIPlayer(game.targetPiece);
+            ai.setDiceSequence(loader.diceSequence); // CRITICAL
+            player = ai;
+        }
+
         PrintWriter writer = new PrintWriter(new FileWriter("moves.txt"));
         loader.printGameDetails(playerName, writer);
 
