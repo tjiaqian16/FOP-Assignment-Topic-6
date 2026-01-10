@@ -9,3 +9,8 @@ Pris,2,Lost
 AIPlayer,2,Won
 jia qian,1,Lost
 p,1,Lost
+P1,1,Lost
+P1,1,Won
+O,1,Lost
+O,1,Won
+O,1,Lost

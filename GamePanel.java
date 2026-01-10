@@ -33,7 +33,7 @@ public class GamePanel extends BackgroundImagePanel {
     // --- Players ---
     private HumanPlayer humanPlayer;   
     private RandomPlayer randomPlayer; 
-    private AIPlayer aiPlayer;         
+    private AIPlayer aiPlayer; // Field is now properly used
     
     private static final int BOARD_SIZE = 10;
 
@@ -42,7 +42,7 @@ public class GamePanel extends BackgroundImagePanel {
         super("setup_bg.jpg");
         this.mainApp = app;
         
-        // Initialize logic helpers
+        // Initialize static players (Human and Random don't depend on level data)
         this.humanPlayer = new HumanPlayer();
         this.randomPlayer = new RandomPlayer(); 
         
@@ -193,6 +193,9 @@ public class GamePanel extends BackgroundImagePanel {
             currentPositions = loader.initialPositions.clone();
             currentTurn = 0;
             
+            // Initialize the AIPlayer here since we now know the target piece
+            this.aiPlayer = new AIPlayer(this.targetPiece); 
+            
             this.currentPlayerName = playerName;
             this.currentLevel = levelNum;
             this.gameEnded = false;
@@ -215,9 +218,9 @@ public class GamePanel extends BackgroundImagePanel {
         if (gameEnded) return;
         SoundManager.getInstance().playSound("click.wav");
 
-        // Check Turn Limit
+        // --- 1. Check Turn Limit First (Updated to match GameMain logic) ---
         if (currentTurn >= 30 || currentTurn >= loader.diceSequence.size()) {
-            endGame(false, "Game Over! Turn limit reached.");
+            endGame(false, "FAILED! Puzzle not solved within 30 moves.");
             return;
         }
 
@@ -227,23 +230,32 @@ public class GamePanel extends BackgroundImagePanel {
         if (moves.isEmpty()) {
             infoLabel.setText("Turn " + (currentTurn + 1) + " (Dice " + dice + "): No moves possible.");
             currentTurn++;
+            
+            // Check if we hit the limit immediately after skipping
+            if (currentTurn >= 30) {
+                endGame(false, "FAILED! Puzzle not solved within 30 moves.");
+                return;
+            }
+            
             updateBoard();
             return;
         }
 
         int mode = mainApp.getGameMode();
 
-        // 1. HUMAN TURN
+        // 2. HUMAN TURN
         if (mode == 1) { 
             startHumanTurn(dice, moves);
             return; 
         } 
         
-        // 2. COMPUTER TURN
+        // 3. COMPUTER TURN
         String playerName = (mode == 2) ? "Random Player" : "AI";
+        
+        // Use the instance field 'aiPlayer' which was initialized in startLevel()
         int chosenMove = (mode == 2) 
             ? randomPlayer.chooseMove(moves) 
-            : new AIPlayer(gameState.targetPiece).chooseMove(moves, currentPositions);
+            : aiPlayer.chooseMove(moves, currentPositions);
 
         if (chosenMove != -1) {
             int pieceId = chosenMove / 100;
@@ -346,14 +358,18 @@ public class GamePanel extends BackgroundImagePanel {
         updateBoard();
         nextTurnButton.setEnabled(true);
 
+        // --- CHECK WIN CONDITION (Logic from GameMain) ---
         if (gameState.isWinning(currentPositions)) {
-            endGame(true, "You Win!");
+            endGame(true, "CONGRATULATIONS! Puzzle solved successfully.");
             return;
         }
+
+        // --- CHECK TARGET CAPTURED (Logic from GameMain) ---
         if (currentPositions[targetPiece - 1] == -1) {
-            endGame(false, "Game Over! Target Captured.");
+            endGame(false, "FAILED! Target piece " + targetPiece + " was captured.");
             return;
         }
+
         currentTurn++;
         
         if (mainApp.getGameMode() == 1) {
@@ -365,10 +381,37 @@ public class GamePanel extends BackgroundImagePanel {
 
     private void endGame(boolean won, String message) {
         gameEnded = true;
-        infoLabel.setText(message);
-        JOptionPane.showMessageDialog(this, message);
         nextTurnButton.setEnabled(false);
+
+        // 1. Record Result to Leaderboard
         mainApp.recordGameResult(currentPlayerName, currentLevel, won ? "Won" : "Lost");
+
+        // 2. Play Sound (Optional, using generic click for now if win/lose sounds aren't loaded)
+        // SoundManager.getInstance().playSound(won ? "win.wav" : "lose.wav");
+
+        // 3. Create Custom Options for the Popup
+        Object[] options = {"Play Again", "Quit to Home"};
+        
+        // 4. Show the Dialog
+        int choice = JOptionPane.showOptionDialog(
+            this,
+            message + "\n\nWhat would you like to do?", 
+            won ? "Game Won!" : "Game Over",          
+            JOptionPane.YES_NO_OPTION,
+            won ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.ERROR_MESSAGE,
+            null, 
+            options,
+            options[0]
+        );
+
+        // 5. Handle User Choice
+        if (choice == JOptionPane.YES_OPTION) {
+            // Restart the same level
+            startLevel(currentLevel, currentPlayerName);
+        } else {
+            // Quit to Home
+            mainApp.showView("HOME");
+        }
     }
 
     private void updateBoard() {
@@ -405,7 +448,7 @@ public class GamePanel extends BackgroundImagePanel {
     }
 
     // ============================
-    // SETTINGS DIALOG (UPDATED)
+    // SETTINGS DIALOG
     // ============================
     private void showSettingsDialog() {
         SoundManager.getInstance().playSound("click.wav");
@@ -427,7 +470,7 @@ public class GamePanel extends BackgroundImagePanel {
         title.setHorizontalAlignment(SwingConstants.CENTER);
         content.add(title);
 
-        // Music Switch Row (UPDATED: Uses ToggleSwitch)
+        // Music Switch Row 
         JPanel musicPanel = new JPanel(new BorderLayout());
         musicPanel.setOpaque(false);
         JLabel musicLabel = new JLabel("Background Music");
@@ -438,7 +481,7 @@ public class GamePanel extends BackgroundImagePanel {
         musicPanel.add(musicSwitch, BorderLayout.EAST);
         content.add(musicPanel);
 
-        // Sound Switch Row (UPDATED: Uses ToggleSwitch)
+        // Sound Switch Row 
         JPanel soundPanel = new JPanel(new BorderLayout());
         soundPanel.setOpaque(false);
         JLabel soundLabel = new JLabel("Sound Effects");
@@ -470,7 +513,7 @@ public class GamePanel extends BackgroundImagePanel {
     }
 
     // ============================
-    // CUSTOM BUTTON (FIXED)
+    // CUSTOM BUTTON
     // ============================
     private static class RoundedButton extends JButton {
         private Color normalColor = new Color(0, 105, 120);
@@ -491,7 +534,6 @@ public class GamePanel extends BackgroundImagePanel {
             setCursor(new Cursor(Cursor.HAND_CURSOR));
             
             addMouseListener(new MouseAdapter() {
-                // Just update flags and repaint. Do NOT call setBackground here.
                 public void mouseEntered(MouseEvent e) { isHovered = true; repaint(); }
                 public void mouseExited(MouseEvent e) { isHovered = false; isPressed = false; repaint(); }
                 public void mousePressed(MouseEvent e) { isPressed = true; repaint(); }
@@ -499,8 +541,6 @@ public class GamePanel extends BackgroundImagePanel {
             });
         }
         
-        // This allows you to set the base color (e.g. Red for Quit, Green for Resume)
-        // It calculates the hover/pressed shades ONCE, when configured.
         @Override
         public void setBackground(Color bg) {
             this.normalColor = bg;

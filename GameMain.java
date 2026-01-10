@@ -1,36 +1,40 @@
+import javax.swing.*;
 import java.io.*;
 import java.util.*;
 
 public class GameMain {
     public static void main(String[] args) throws Exception {
-        Scanner input = new Scanner(System.in);
-        
-        // 1. Prompt user for player mode
-        int mode = -1;
-        while (true) {
-            System.out.print("Select Mode (1: Human Player, 2: Random Player, 3: AI Player): ");
-            if (input.hasNextInt()) {
-                mode = input.nextInt();
-                if (mode >= 1 && mode <= 3) {
-                    input.nextLine(); 
-                    break; 
-                }
-            } else {
-                input.next(); 
-            }
-            System.out.println("Invalid choice. Please enter 1, 2, or 3.");
-        }
-        
-        // 2. Prompt for player name 
+        // 1. Prompt user to choose the mode
+        Object[] modeOptions = {"Human Player", "Random Player", "AI Player"};
+        int modeChoice = JOptionPane.showOptionDialog(
+                null,
+                "Select Game Mode:",
+                "Game Setup",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                modeOptions,
+                modeOptions[0]
+        );
+
+        // Default to 1 (Human) if closed
+        int mode = (modeChoice == -1) ? 1 : modeChoice + 1;
+
+        // 2. Prompt for Player Name
         String playerName;
         if (mode == 1) {
             while (true) {
-                System.out.print("Enter the name of the human player (letters, digits and spaces only): ");
-                playerName = input.nextLine();
+                playerName = JOptionPane.showInputDialog(null, "Enter Human Player Name:", "Player Setup", JOptionPane.QUESTION_MESSAGE);
+                
+                if (playerName == null || playerName.trim().isEmpty()) {
+                    playerName = "Player"; // Default fallback
+                    break;
+                }
+                
                 if (playerName.matches("^[a-zA-Z0-9 ]+$")) {
                     break;
                 } else {
-                    System.out.println("Invalid name! Please use only alphabets, digits and spaces.");
+                    JOptionPane.showMessageDialog(null, "Invalid name! Alphanumeric only.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         } else if (mode == 2) {
@@ -39,44 +43,66 @@ public class GameMain {
             playerName = "AIPlayer";
         }
 
-        // 3. Prompt for level
-        int levelNum = -1;
-        while (true) {
-            System.out.print("Enter the level number (1, 2, 3, or 4): ");
-            if (input.hasNextInt()) {
-                levelNum = input.nextInt();
-                if (levelNum >= 1 && levelNum <= 4) {
-                    break; 
-                }
-            } else {
-                input.next(); 
-            }
-            System.out.println("Invalid level. Please enter a number between 1 and 4.");
-        }
-        
-        String levelFile = "level" + levelNum + ".txt";
+        // 3. Prompt to Select Level
+        Object[] levelOptions = {1, 2, 3, 4};
+        int levelChoice = JOptionPane.showOptionDialog(
+                null,
+                "Select Level:",
+                "Level Setup",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                levelOptions,
+                levelOptions[0]
+        );
+        int levelNum = (levelChoice == -1) ? 1 : (int) levelOptions[levelChoice];
 
-        // Load game data
+        // Load Game Data
+        String levelFile = "level" + levelNum + ".txt";
+        // Ensure GameLoader and level files exist in the project directory
         GameLoader loader = new GameLoader(levelFile);
         GameState game = new GameState();
         game.targetPiece = loader.targetPiece;
         int[] currentPositions = loader.initialPositions.clone();
 
-        // 4. Create Player Object (Polymorphism)
-        // This fulfills Requirement 8 explicitly
+        // 4. Create Player Object
         Player player;
         if (mode == 1) {
-            player = new HumanPlayer();
+            // Anonymous inner class to override chooseMove with Popup Input
+            player = new HumanPlayer() {
+                @Override
+                public int chooseMove(List<Integer> possibleMoves, int[] currentPositions) {
+                    if (possibleMoves.isEmpty()) return -1;
+
+                    String[] options = new String[possibleMoves.size()];
+                    for (int i = 0; i < possibleMoves.size(); i++) {
+                        int m = possibleMoves.get(i);
+                        options[i] = "Piece " + (m / 100) + " -> Square " + (m % 100);
+                    }
+
+                    String selected = (String) JOptionPane.showInputDialog(
+                            null,
+                            "Your Turn! Select a move:",
+                            "Make a Move",
+                            JOptionPane.PLAIN_MESSAGE,
+                            null,
+                            options,
+                            options[0]
+                    );
+
+                    if (selected == null) return possibleMoves.get(0); // Default if cancelled
+
+                    for (int i = 0; i < options.length; i++) {
+                        if (options[i].equals(selected)) return possibleMoves.get(i);
+                    }
+                    return possibleMoves.get(0);
+                }
+            };
         } else if (mode == 2) {
             player = new RandomPlayer();
         } else {
             player = new AIPlayer(game.targetPiece);
         }
-
-        System.out.println("\n========================================");
-        System.out.println("GAME STARTING: Target Piece is " + game.targetPiece);
-        System.out.println("Goal: Reach Square 0 in 30 moves.");
-        System.out.println("========================================\n");
 
         PrintWriter writer = new PrintWriter(new FileWriter("moves.txt"));
         loader.printGameDetails(playerName, writer);
@@ -85,11 +111,8 @@ public class GameMain {
         boolean targetCaptured = false;
         int maxMoves = 30;
 
-        // Game loop
+        // --- Game Loop ---
         for (int turn = 0; turn < maxMoves && turn < loader.diceSequence.size(); turn++) {
-            int remainingMoves = maxMoves - turn;
-            System.out.println("--- Turn " + (turn + 1) + " | Moves Remaining: " + remainingMoves + " ---");
-
             if (currentPositions[game.targetPiece - 1] == -1) {
                 targetCaptured = true;
                 break;
@@ -97,60 +120,49 @@ public class GameMain {
 
             int dice = loader.diceSequence.get(turn);
             List<Integer> moves = game.generatePossibleMoves(dice, currentPositions);
-            
-            if (moves.isEmpty()) {
-                System.out.println("No possible moves available!");
-                break;
-            }
 
-            // 5. Call chooseMove via Player interface
-            // This works for Human, Random, and AI uniformly
+            if (moves.isEmpty()) continue;
+
+            // 5. Call chooseMove
             int chosenMove = player.chooseMove(moves, currentPositions);
 
-            if (mode != 1) {
-                System.out.println((mode == 2 ? "Random Player" : "AI") + " chose Piece " + (chosenMove / 100) + " to Square " + (chosenMove % 100));
-                System.out.println();
-            }
-
-            // Execute move
+            // Execute Move
             int pieceToMove = chosenMove / 100;
             int destination = chosenMove % 100;
-
             for (int i = 0; i < 6; i++) {
-                if (currentPositions[i] == destination) {
-                    currentPositions[i] = -1; 
-                }
+                if (currentPositions[i] == destination) currentPositions[i] = -1;
             }
             currentPositions[pieceToMove - 1] = destination;
 
-            // 6. Log positions using player.printMove()
-            // This fulfills Requirement 7 explicitly
+            // 6. Record Move
             player.printMove(currentPositions, writer);
 
             if (game.isWinning(currentPositions)) {
                 won = true;
                 break;
             }
-
             if (currentPositions[game.targetPiece - 1] == -1) {
                 targetCaptured = true;
                 break;
             }
         }
-        
         writer.close();
 
-        // Show results
-        System.out.println("========================================");
+        // 7. Show Result
+        String resultMessage;
+        int msgType;
         if (won) {
-            System.out.println("CONGRATULATIONS! Puzzle solved successfully.");
+            resultMessage = "CONGRATULATIONS!\nPuzzle solved successfully.";
+            msgType = JOptionPane.INFORMATION_MESSAGE;
         } else if (targetCaptured) {
-            System.out.println("FAILED! Target piece " + game.targetPiece + " was captured.");
+            resultMessage = "FAILED!\nTarget piece " + game.targetPiece + " was captured.";
+            msgType = JOptionPane.ERROR_MESSAGE;
         } else {
-            System.out.println("FAILED! Puzzle not solved within 30 moves.");
+            resultMessage = "FAILED!\nPuzzle not solved within 30 moves.";
+            msgType = JOptionPane.WARNING_MESSAGE;
         }
-        System.out.println("========================================\n");
-        
-        input.close();
+
+        JOptionPane.showMessageDialog(null, resultMessage, "Game Over", msgType);
+        System.exit(0);
     }
 }
