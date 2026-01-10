@@ -1,4 +1,5 @@
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -20,13 +21,11 @@ public class HomePage extends BackgroundImagePanel {
         setLayout(new GridBagLayout()); 
 
         // --- 1. Title Section (Left Side) ---
-        // UPDATED: Now uses an image instead of text
         JLabel titleLabel = new JLabel();
         try {
-            // Load the image "title.png". Ensure this file exists in your project folder!
+            // Load the image "title.png"
             ImageIcon titleIcon = new ImageIcon(ImageIO.read(new File("title.png")));
             
-            // Optional: Scale image if it's too big (Example: limit width to 500)
             int targetWidth = 500;
             if (titleIcon.getIconWidth() > targetWidth) {
                 int newHeight = (targetWidth * titleIcon.getIconHeight()) / titleIcon.getIconWidth();
@@ -36,19 +35,18 @@ public class HomePage extends BackgroundImagePanel {
             
             titleLabel.setIcon(titleIcon);
         } catch (Exception e) {
-            // Fallback if image is missing
             titleLabel.setText("<html><h1 style='color:white;'>Title Image<br>Not Found</h1></html>");
-            System.out.println("Could not find 'title.png'. Please add the file.");
         }
         titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
         // --- 2. Button Section (Right Side) ---
-        JPanel buttonPanel = new JPanel(new GridLayout(4, 1, 0, 25)); 
+        JPanel buttonPanel = new JPanel(new GridLayout(5, 1, 0, 20)); 
         buttonPanel.setOpaque(false); 
 
         // Create buttons
         JButton playBtn = createRoundedButton("Play");
         JButton leaderboardBtn = createRoundedButton("Leaderboard");
+        JButton rulesBtn = createRoundedButton("Game Rules"); 
         JButton settingBtn = createRoundedButton("Setting");
         JButton exitBtn = createRoundedButton("Exit");
 
@@ -63,6 +61,11 @@ public class HomePage extends BackgroundImagePanel {
             mainApp.showView("LEADERBOARD");
         });
 
+        rulesBtn.addActionListener(e -> {
+            soundManager.playSound("click.wav");
+            showRulesDialog();
+        });
+
         settingBtn.addActionListener(e -> {
             soundManager.playSound("click.wav");
             mainApp.showView("SETTINGS"); 
@@ -73,31 +76,111 @@ public class HomePage extends BackgroundImagePanel {
         // Add buttons to panel
         buttonPanel.add(playBtn);
         buttonPanel.add(leaderboardBtn);
+        buttonPanel.add(rulesBtn); 
         buttonPanel.add(settingBtn);
         buttonPanel.add(exitBtn);
 
         // --- Main Layout Constraints ---
         GridBagConstraints gbc = new GridBagConstraints();
 
-        // Constraint for Left Side (Title)
+        // Left Side (Title)
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 0.5; 
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.NONE;
-        gbc.anchor = GridBagConstraints.EAST; // Push title to the center line
-        gbc.insets = new Insets(0, 0, 0, 30); // Gap between title and center
+        gbc.anchor = GridBagConstraints.EAST; 
+        gbc.insets = new Insets(0, 0, 0, 30); 
         
         add(titleLabel, gbc);
 
-        // Constraint for Right Side (Buttons)
+        // Right Side (Buttons)
         gbc.gridx = 1;
         gbc.weightx = 0.5; 
         gbc.fill = GridBagConstraints.NONE; 
-        gbc.anchor = GridBagConstraints.WEST; // Push buttons to the center line
-        gbc.insets = new Insets(0, 30, 0, 0); // Gap between buttons and center
+        gbc.anchor = GridBagConstraints.WEST; 
+        gbc.insets = new Insets(0, 30, 0, 0); 
         
         add(buttonPanel, gbc);
+    }
+
+    // ==========================================
+    // UPDATED: RULES POPUP DIALOG
+    // ==========================================
+    private void showRulesDialog() {
+        JDialog dialog = new JDialog(mainApp, "Game Rules", true);
+        dialog.setUndecorated(true);
+        dialog.setSize(550, 520); // Increased size to fit detailed rules
+        dialog.setLocationRelativeTo(this);
+
+        // Main Container
+        JPanel content = new JPanel(new BorderLayout());
+        content.setBackground(new Color(255, 250, 240)); // Floral White
+        content.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(139, 69, 19), 4), // Brown Border
+            new EmptyBorder(15, 15, 15, 15)
+        ));
+
+        // Title
+        JLabel title = new JLabel("GAME RULES");
+        title.setFont(new Font("SansSerif", Font.BOLD, 28));
+        title.setForeground(new Color(139, 69, 19));
+        title.setHorizontalAlignment(SwingConstants.CENTER);
+        title.setBorder(new EmptyBorder(0, 0, 10, 0));
+        content.add(title, BorderLayout.NORTH);
+
+        // UPDATED RULES TEXT
+        String rulesHtml = "<html><body style='width: 400px; font-family: sans-serif; font-size: 11px;'>" +
+                "<ul>" +
+                "<li><b>Game Flow:</b> The dice sequence is fixed for each level. You have a <b>limit of 30 moves</b>.</li><br>" +
+                "<li><b>Choosing a Piece:</b>" +
+                "   <ul>" +
+                "   <li>If the dice number <b>matches</b> a piece on the board, you <b>must</b> move that piece.</li>" +
+                "   <li>If the dice number <b>does not match</b> any piece, you can choose:" +
+                "       <ol>" +
+                "       <li>The piece with the <b>smallest number > dice</b>.</li>" +
+                "       <li>The piece with the <b>biggest number < dice</b>.</li>" +
+                "       </ol>" +
+                "   </li>" +
+                "   </ul>" +
+                "</li><br>" +
+                "<li><b>Movement:</b> A piece can move to any of the <b>8 adjacent squares</b> (like a King). Only one move per turn.</li><br>" +
+                "<li><b>Capturing:</b> If you move to a square occupied by another piece, that piece is <b>captured</b> and removed.</li><br>" +
+                "<li><b>WIN:</b> The Target Piece reaches <b>Square 0</b> within 30 moves.</li>" +
+                "<li><b>LOSE:</b> The Target Piece fails to reach Square 0 after 30 moves.</li>" +
+                "</ul></body></html>";
+
+        JEditorPane rulesPane = new JEditorPane("text/html", rulesHtml);
+        rulesPane.setEditable(false);
+        rulesPane.setOpaque(false);
+        
+        JScrollPane scrollPane = new JScrollPane(rulesPane);
+        scrollPane.setBorder(null);
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        content.add(scrollPane, BorderLayout.CENTER);
+
+        // Close Button
+        JButton closeBtn = new JButton("Understood");
+        closeBtn.setFont(new Font("SansSerif", Font.BOLD, 16));
+        closeBtn.setBackground(new Color(46, 204, 113));
+        closeBtn.setForeground(Color.WHITE);
+        closeBtn.setFocusPainted(false);
+        closeBtn.setBorderPainted(false);
+        closeBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        closeBtn.addActionListener(e -> {
+            soundManager.playSound("click.wav");
+            dialog.dispose();
+        });
+        
+        JPanel btnPanel = new JPanel();
+        btnPanel.setOpaque(false);
+        btnPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
+        btnPanel.add(closeBtn);
+        content.add(btnPanel, BorderLayout.SOUTH);
+
+        dialog.add(content);
+        dialog.setVisible(true);
     }
 
     /**
@@ -114,10 +197,9 @@ public class HomePage extends BackgroundImagePanel {
      * Custom Button Class
      */
     private static class RoundedButton extends JButton {
-        // UPDATED COLORS: Deep Teal/Blue to contrast nicely with Orange
-        private Color normalColor = new Color(0, 105, 120); // Deep Teal
-        private Color hoverColor = new Color(0, 150, 170);   // Lighter Teal
-        private Color pressedColor = new Color(0, 70, 80);   // Darker Teal
+        private Color normalColor = new Color(0, 105, 120); 
+        private Color hoverColor = new Color(0, 150, 170);   
+        private Color pressedColor = new Color(0, 70, 80);   
         
         private boolean isHovered = false;
         private boolean isPressed = false;
@@ -148,7 +230,7 @@ public class HomePage extends BackgroundImagePanel {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
             // Draw Shadow
-            g2.setColor(new Color(0, 50, 60, 150)); // Semi-transparent dark shadow
+            g2.setColor(new Color(0, 50, 60, 150)); 
             g2.fillRoundRect(0, 8, getWidth(), getHeight() - 8, 40, 40);
 
             // Choose color

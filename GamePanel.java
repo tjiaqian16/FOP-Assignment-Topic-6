@@ -12,6 +12,7 @@ public class GamePanel extends BackgroundImagePanel {
     // --- Components ---
     private JPanel boardPanel;
     private JLabel statusLabel;
+    private JLabel movesLeftLabel; // NEW: Label for the counter
     private JLabel infoLabel;
     private JButton nextTurnButton;
     private JButton settingsButton;
@@ -29,40 +30,47 @@ public class GamePanel extends BackgroundImagePanel {
     private int currentLevel;
     private boolean gameEnded = false;
     private boolean isHumanTurn = false;
+    
+    // Constant for Max Moves (matches GameMain.java)
+    private static final int MAX_GAME_MOVES = 30;
 
     // --- Players ---
     private HumanPlayer humanPlayer;   
     private RandomPlayer randomPlayer; 
-    private AIPlayer aiPlayer; // Field is now properly used
+    private AIPlayer aiPlayer; 
     
     private static final int BOARD_SIZE = 10;
 
     public GamePanel(MainInterface app) {
-        // Use the desk background for a nice game atmosphere
         super("setup_bg.jpg");
         this.mainApp = app;
         
-        // Initialize static players (Human and Random don't depend on level data)
         this.humanPlayer = new HumanPlayer();
         this.randomPlayer = new RandomPlayer(); 
         
         setLayout(new BorderLayout());
 
         // ============================
-        // 1. TOP HEADER (Status + Settings)
+        // 1. TOP HEADER (Status + Moves Left + Settings)
         // ============================
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
         headerPanel.setBorder(new EmptyBorder(15, 25, 0, 25));
 
-        // Status Label (Top Left)
+        // A. Status Label (Top Left)
         statusLabel = new JLabel("Initializing...");
         statusLabel.setFont(new Font("SansSerif", Font.BOLD, 22));
         statusLabel.setForeground(new Color(20, 20, 20)); 
         statusLabel.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 0));
+        
+        // B. Moves Left Label (Top Center) - NEW
+        movesLeftLabel = new JLabel("Moves: --");
+        movesLeftLabel.setFont(new Font("SansSerif", Font.BOLD, 22));
+        movesLeftLabel.setForeground(new Color(178, 34, 34)); // Dark Red for visibility
+        movesLeftLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
-        // Settings Button (Top Right) - Image Only
-        settingsButton = new JButton(); // No text initially
+        // C. Settings Button (Top Right)
+        settingsButton = new JButton(); 
         settingsButton.setPreferredSize(new Dimension(60, 60));
         settingsButton.setFocusPainted(false);
         settingsButton.setContentAreaFilled(false);
@@ -70,19 +78,16 @@ public class GamePanel extends BackgroundImagePanel {
         settingsButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         settingsButton.setToolTipText("Settings");
         
-        // Try to load 'settings_icon.png'
         try {
             File imgFile = new File("settings_icon.png"); 
             if (imgFile.exists()) {
                 ImageIcon icon = new ImageIcon(ImageIO.read(imgFile));
-                // Scale if too big
                 if (icon.getIconWidth() > 50) {
                     Image scaled = icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
                     icon = new ImageIcon(scaled);
                 }
                 settingsButton.setIcon(icon);
             } else {
-                // Fallback if image missing: A simple unicode gear
                 settingsButton.setText("⚙");
                 settingsButton.setFont(new Font("SansSerif", Font.PLAIN, 40));
                 settingsButton.setForeground(new Color(50, 50, 50));
@@ -90,26 +95,26 @@ public class GamePanel extends BackgroundImagePanel {
         } catch (Exception e) {
             settingsButton.setText("⚙");
         }
-
         settingsButton.addActionListener(e -> showSettingsDialog());
 
         headerPanel.add(statusLabel, BorderLayout.WEST);
+        headerPanel.add(movesLeftLabel, BorderLayout.CENTER); // Added to center
         headerPanel.add(settingsButton, BorderLayout.EAST);
         
         add(headerPanel, BorderLayout.NORTH);
 
         // ============================
-        // 2. CENTER AREA (Grid + Button + Label)
+        // 2. CENTER AREA
         // ============================
         JPanel centerWrapper = new JPanel(new GridBagLayout());
         centerWrapper.setOpaque(false);
         GridBagConstraints gbc = new GridBagConstraints();
 
-        // --- A. The Board (Grid) ---
+        // --- Board ---
         JPanel boardContainer = new JPanel(new BorderLayout());
-        boardContainer.setBackground(new Color(255, 255, 255, 180)); // Milky translucent white
+        boardContainer.setBackground(new Color(255, 255, 255, 180)); 
         boardContainer.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(139, 69, 19), 3), // Brown border
+                BorderFactory.createLineBorder(new Color(139, 69, 19), 3),
                 new EmptyBorder(10, 10, 10, 10)
         ));
 
@@ -124,7 +129,7 @@ public class GamePanel extends BackgroundImagePanel {
             btn.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
             btn.setBackground(new Color(245, 245, 245));
             btn.setFont(new Font("SansSerif", Font.BOLD, 14));
-            btn.setEnabled(false); // Default disabled
+            btn.setEnabled(false); 
             
             int finalIndex = i;
             btn.addActionListener(e -> handleGridClick(finalIndex)); 
@@ -134,41 +139,37 @@ public class GamePanel extends BackgroundImagePanel {
         }
         boardContainer.add(boardPanel, BorderLayout.CENTER);
 
-        // Add Grid to Center Wrapper (Row 0, Col 0)
         gbc.gridx = 0; 
         gbc.gridy = 0;
-        gbc.insets = new Insets(0, 0, 10, 20); // Gap right for the button
+        gbc.insets = new Insets(0, 0, 10, 20); 
         centerWrapper.add(boardContainer, gbc);
 
-        // --- B. Next Turn Button (Beside Grid) ---
+        // --- Next Turn Button ---
         nextTurnButton = new RoundedButton("Start Game");
-        nextTurnButton.setPreferredSize(new Dimension(140, 80)); // Taller button
+        nextTurnButton.setPreferredSize(new Dimension(140, 80)); 
         nextTurnButton.addActionListener(e -> playNextTurn());
 
-        // Add Button to Center Wrapper (Row 0, Col 1)
         gbc.gridx = 1;
         gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.CENTER; 
         gbc.insets = new Insets(0, 0, 0, 0);
         centerWrapper.add(nextTurnButton, gbc);
 
-        // --- C. Info Label (Below Grid) ---
+        // --- Info Label ---
         infoLabel = new JLabel("Welcome! Press Next Turn to start.");
         infoLabel.setFont(new Font("SansSerif", Font.BOLD | Font.ITALIC, 18));
         infoLabel.setForeground(new Color(20, 20, 20));
         infoLabel.setHorizontalAlignment(SwingConstants.CENTER);
         
-        // Background for readability
         infoLabel.setOpaque(true);
         infoLabel.setBackground(new Color(255, 255, 255, 150));
         infoLabel.setBorder(new EmptyBorder(5, 15, 5, 15));
 
-        // Add Label to Center Wrapper (Row 1, Col 0 - aligning with Grid)
         gbc.gridx = 0;
         gbc.gridy = 1;
-        gbc.gridwidth = 1; // Match grid width
+        gbc.gridwidth = 1; 
         gbc.anchor = GridBagConstraints.CENTER;
-        gbc.insets = new Insets(5, 0, 0, 20); // Top gap, Right gap to match grid
+        gbc.insets = new Insets(5, 0, 0, 20); 
         centerWrapper.add(infoLabel, gbc);
 
         add(centerWrapper, BorderLayout.CENTER);
@@ -193,7 +194,6 @@ public class GamePanel extends BackgroundImagePanel {
             currentPositions = loader.initialPositions.clone();
             currentTurn = 0;
             
-            // Initialize the AIPlayer here since we now know the target piece
             this.aiPlayer = new AIPlayer(this.targetPiece); 
             
             this.currentPlayerName = playerName;
@@ -203,6 +203,9 @@ public class GamePanel extends BackgroundImagePanel {
 
             statusLabel.setText(playerName + " - Level " + levelNum);
             infoLabel.setText("Goal: Move P" + targetPiece + " to Square 0!");
+            
+            // --- UPDATE MOVES LEFT LABEL ---
+            updateMovesLeftLabel();
             
             nextTurnButton.setText("Next Turn");
             nextTurnButton.setEnabled(true);
@@ -214,12 +217,27 @@ public class GamePanel extends BackgroundImagePanel {
         }
     }
 
+    private void updateMovesLeftLabel() {
+        if (loader == null) return;
+        int totalAvailable = Math.min(MAX_GAME_MOVES, loader.diceSequence.size());
+        int left = Math.max(0, totalAvailable - currentTurn);
+        
+        movesLeftLabel.setText("Moves Left: " + left);
+        
+        // Optional: Change color if running low
+        if (left <= 5) {
+            movesLeftLabel.setForeground(Color.RED);
+        } else {
+            movesLeftLabel.setForeground(new Color(178, 34, 34));
+        }
+    }
+
     private void playNextTurn() {
         if (gameEnded) return;
         SoundManager.getInstance().playSound("click.wav");
 
-        // --- 1. Check Turn Limit First (Updated to match GameMain logic) ---
-        if (currentTurn >= 30 || currentTurn >= loader.diceSequence.size()) {
+        // Check if moves are exhausted
+        if (currentTurn >= MAX_GAME_MOVES || currentTurn >= loader.diceSequence.size()) {
             endGame(false, "FAILED! Puzzle not solved within 30 moves.");
             return;
         }
@@ -230,9 +248,9 @@ public class GamePanel extends BackgroundImagePanel {
         if (moves.isEmpty()) {
             infoLabel.setText("Turn " + (currentTurn + 1) + " (Dice " + dice + "): No moves possible.");
             currentTurn++;
+            updateMovesLeftLabel(); // Update counter even if skipped
             
-            // Check if we hit the limit immediately after skipping
-            if (currentTurn >= 30) {
+            if (currentTurn >= MAX_GAME_MOVES) {
                 endGame(false, "FAILED! Puzzle not solved within 30 moves.");
                 return;
             }
@@ -243,16 +261,13 @@ public class GamePanel extends BackgroundImagePanel {
 
         int mode = mainApp.getGameMode();
 
-        // 2. HUMAN TURN
         if (mode == 1) { 
             startHumanTurn(dice, moves);
             return; 
         } 
         
-        // 3. COMPUTER TURN
         String playerName = (mode == 2) ? "Random Player" : "AI";
         
-        // Use the instance field 'aiPlayer' which was initialized in startLevel()
         int chosenMove = (mode == 2) 
             ? randomPlayer.chooseMove(moves) 
             : aiPlayer.chooseMove(moves, currentPositions);
@@ -295,7 +310,7 @@ public class GamePanel extends BackgroundImagePanel {
     }
 
     private void highlightValidPieces() {
-        updateBoard(); // Reset visuals
+        updateBoard(); 
         
         for (int i = 0; i < currentPositions.length; i++) {
             int pos = currentPositions[i];
@@ -303,7 +318,7 @@ public class GamePanel extends BackgroundImagePanel {
             
             if (pos != -1 && humanPlayer.canPieceMove(pieceId)) {
                 gridButtons[pos].setEnabled(true); 
-                gridButtons[pos].setBackground(new Color(255, 235, 59)); // Yellow
+                gridButtons[pos].setBackground(new Color(255, 235, 59)); 
                 gridButtons[pos].setBorder(BorderFactory.createLineBorder(Color.ORANGE, 2));
             }
         }
@@ -314,16 +329,14 @@ public class GamePanel extends BackgroundImagePanel {
 
         int clickedPieceId = getPieceAt(index);
 
-        // Select Piece
         if (clickedPieceId != -1 && humanPlayer.selectPiece(clickedPieceId)) {
             highlightValidPieces();
-            gridButtons[index].setBackground(new Color(255, 140, 0)); // Dark Orange
+            gridButtons[index].setBackground(new Color(255, 140, 0)); 
             
-            // Enable Destinations
             for (int r = 0; r < BOARD_SIZE * BOARD_SIZE; r++) {
                 if (humanPlayer.isValidDestination(r)) {
                     gridButtons[r].setEnabled(true); 
-                    gridButtons[r].setBackground(new Color(144, 238, 144)); // Light Green
+                    gridButtons[r].setBackground(new Color(144, 238, 144)); 
                     gridButtons[r].setBorder(BorderFactory.createLineBorder(new Color(34, 139, 34), 2));
                 }
             }
@@ -332,7 +345,6 @@ public class GamePanel extends BackgroundImagePanel {
             return;
         }
 
-        // Move Piece
         if (humanPlayer.isValidDestination(index)) {
             executeMove(humanPlayer.getSelectedPiece(), index);
             isHumanTurn = false;
@@ -358,19 +370,20 @@ public class GamePanel extends BackgroundImagePanel {
         updateBoard();
         nextTurnButton.setEnabled(true);
 
-        // --- CHECK WIN CONDITION (Logic from GameMain) ---
         if (gameState.isWinning(currentPositions)) {
             endGame(true, "CONGRATULATIONS! Puzzle solved successfully.");
             return;
         }
 
-        // --- CHECK TARGET CAPTURED (Logic from GameMain) ---
         if (currentPositions[targetPiece - 1] == -1) {
             endGame(false, "FAILED! Target piece " + targetPiece + " was captured.");
             return;
         }
 
         currentTurn++;
+        
+        // --- UPDATE COUNTER ---
+        updateMovesLeftLabel();
         
         if (mainApp.getGameMode() == 1) {
              nextTurnButton.setText("Roll Dice");
@@ -382,36 +395,87 @@ public class GamePanel extends BackgroundImagePanel {
     private void endGame(boolean won, String message) {
         gameEnded = true;
         nextTurnButton.setEnabled(false);
-
-        // 1. Record Result to Leaderboard
-        mainApp.recordGameResult(currentPlayerName, currentLevel, won ? "Won" : "Lost");
-
-        // 2. Play Sound (Optional, using generic click for now if win/lose sounds aren't loaded)
-        // SoundManager.getInstance().playSound(won ? "win.wav" : "lose.wav");
-
-        // 3. Create Custom Options for the Popup
-        Object[] options = {"Play Again", "Quit to Home"};
         
-        // 4. Show the Dialog
-        int choice = JOptionPane.showOptionDialog(
-            this,
-            message + "\n\nWhat would you like to do?", 
-            won ? "Game Won!" : "Game Over",          
-            JOptionPane.YES_NO_OPTION,
-            won ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.ERROR_MESSAGE,
-            null, 
-            options,
-            options[0]
-        );
+        // Update label to show final state (likely 0 or whatever)
+        updateMovesLeftLabel();
 
-        // 5. Handle User Choice
-        if (choice == JOptionPane.YES_OPTION) {
-            // Restart the same level
-            startLevel(currentLevel, currentPlayerName);
-        } else {
-            // Quit to Home
+        // Calculate Remaining Moves for display
+        int maxMoves = Math.min(MAX_GAME_MOVES, loader.diceSequence.size());
+        int movesLeft = Math.max(0, maxMoves - currentTurn); // Note: currentTurn is incremented at end of turn
+
+        mainApp.recordGameResult(currentPlayerName, currentLevel, won ? "Won" : "Lost");
+        showGameOverDialog(won, message, movesLeft);
+    }
+
+    private void showGameOverDialog(boolean won, String message, int movesLeft) {
+        JDialog dialog = new JDialog(mainApp, "Game Over", true);
+        dialog.setUndecorated(true);
+        dialog.setSize(450, 400); 
+        dialog.setLocationRelativeTo(this);
+        
+        JPanel content = new JPanel(new GridBagLayout());
+        content.setBackground(new Color(255, 248, 220)); 
+        content.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(139, 69, 19), 5), 
+            new EmptyBorder(25, 25, 25, 25)
+        ));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0; 
+        gbc.gridy = 0;
+        gbc.insets = new Insets(0, 0, 10, 0);
+
+        JLabel titleLabel = new JLabel(won ? "VICTORY!" : "DEFEAT");
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 42));
+        titleLabel.setForeground(won ? new Color(34, 139, 34) : new Color(178, 34, 34)); 
+        content.add(titleLabel, gbc);
+
+        gbc.gridy++;
+        gbc.insets = new Insets(0, 10, 10, 10);
+        
+        JLabel msgLabel = new JLabel("<html><div style='text-align: center; width: 320px; font-size: 14px; color: #333333;'>" + message + "</div></html>");
+        msgLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        content.add(msgLabel, gbc);
+
+        gbc.gridy++;
+        gbc.insets = new Insets(0, 10, 25, 10);
+        
+        JLabel movesLabel = new JLabel("Moves Remaining: " + movesLeft);
+        movesLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
+        movesLabel.setForeground(new Color(100, 100, 100)); 
+        content.add(movesLabel, gbc);
+
+        gbc.gridy++;
+        gbc.insets = new Insets(10, 0, 0, 0);
+        
+        JPanel btnPanel = new JPanel(new GridLayout(1, 2, 25, 0)); 
+        btnPanel.setOpaque(false);
+
+        RoundedButton playAgainBtn = new RoundedButton("Play Again");
+        playAgainBtn.setBackground(new Color(46, 204, 113)); 
+        playAgainBtn.setPreferredSize(new Dimension(150, 60));
+        playAgainBtn.addActionListener(e -> {
+            dialog.dispose();
+            SoundManager.getInstance().playSound("click.wav");
+            startLevel(currentLevel, currentPlayerName); 
+        });
+
+        RoundedButton quitBtn = new RoundedButton("Exit to Home");
+        quitBtn.setBackground(new Color(231, 76, 60)); 
+        quitBtn.setPreferredSize(new Dimension(150, 60));
+        quitBtn.addActionListener(e -> {
+            dialog.dispose();
+            SoundManager.getInstance().playSound("click.wav");
             mainApp.showView("HOME");
-        }
+        });
+
+        btnPanel.add(playAgainBtn);
+        btnPanel.add(quitBtn);
+        
+        content.add(btnPanel, gbc);
+
+        dialog.add(content);
+        dialog.setVisible(true);
     }
 
     private void updateBoard() {
@@ -422,10 +486,8 @@ public class GamePanel extends BackgroundImagePanel {
             btn.setEnabled(false);
         }
         
-        // Goal
         gridButtons[0].setBorder(BorderFactory.createLineBorder(new Color(255, 215, 0), 2));
         
-        // Pieces
         for (int i = 0; i < currentPositions.length; i++) {
             int pos = currentPositions[i];
             if (pos != -1) {
@@ -436,10 +498,10 @@ public class GamePanel extends BackgroundImagePanel {
                     btn.setFont(new Font("SansSerif", Font.BOLD, 16));
                     
                     if (i + 1 == targetPiece) {
-                        btn.setBackground(new Color(255, 100, 100)); // Target
+                        btn.setBackground(new Color(255, 100, 100)); 
                         btn.setForeground(Color.WHITE);
                     } else {
-                        btn.setBackground(new Color(70, 130, 180)); // Normal
+                        btn.setBackground(new Color(70, 130, 180)); 
                         btn.setForeground(Color.WHITE);
                     }
                 }
@@ -447,9 +509,6 @@ public class GamePanel extends BackgroundImagePanel {
         }
     }
 
-    // ============================
-    // SETTINGS DIALOG
-    // ============================
     private void showSettingsDialog() {
         SoundManager.getInstance().playSound("click.wav");
 
@@ -470,7 +529,6 @@ public class GamePanel extends BackgroundImagePanel {
         title.setHorizontalAlignment(SwingConstants.CENTER);
         content.add(title);
 
-        // Music Switch Row 
         JPanel musicPanel = new JPanel(new BorderLayout());
         musicPanel.setOpaque(false);
         JLabel musicLabel = new JLabel("Background Music");
@@ -481,7 +539,6 @@ public class GamePanel extends BackgroundImagePanel {
         musicPanel.add(musicSwitch, BorderLayout.EAST);
         content.add(musicPanel);
 
-        // Sound Switch Row 
         JPanel soundPanel = new JPanel(new BorderLayout());
         soundPanel.setOpaque(false);
         JLabel soundLabel = new JLabel("Sound Effects");
@@ -492,13 +549,11 @@ public class GamePanel extends BackgroundImagePanel {
         soundPanel.add(soundSwitch, BorderLayout.EAST);
         content.add(soundPanel);
 
-        // Resume Button
         JButton resumeBtn = new RoundedButton("Resume Game");
         resumeBtn.setBackground(new Color(46, 204, 113)); 
         resumeBtn.addActionListener(e -> dialog.dispose());
         content.add(resumeBtn);
 
-        // Home Button
         JButton homeBtn = new RoundedButton("Quit to Home");
         homeBtn.setBackground(new Color(231, 76, 60)); 
         homeBtn.addActionListener(e -> {
@@ -512,15 +567,11 @@ public class GamePanel extends BackgroundImagePanel {
         dialog.setVisible(true);
     }
 
-    // ============================
-    // CUSTOM BUTTON
-    // ============================
     private static class RoundedButton extends JButton {
         private Color normalColor = new Color(0, 105, 120);
         private Color hoverColor = new Color(0, 140, 160);
         private Color pressedColor = new Color(0, 70, 80);
         
-        // Flags to track state instead of overwriting background property
         private boolean isHovered = false;
         private boolean isPressed = false;
 
@@ -554,7 +605,6 @@ public class GamePanel extends BackgroundImagePanel {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             
-            // Choose color based on current state flags
             if (isPressed) {
                 g2.setColor(pressedColor);
             } else if (isHovered) {
@@ -569,9 +619,6 @@ public class GamePanel extends BackgroundImagePanel {
         }
     }
 
-    // ============================
-    // TOGGLE SWITCH CLASS
-    // ============================
     private static class ToggleSwitch extends JPanel {
         private boolean isOn;
         private Color switchOnColor = new Color(46, 204, 113); 
