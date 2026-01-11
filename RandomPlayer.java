@@ -17,7 +17,6 @@ public class RandomPlayer extends Player {
         return possibleMoves.get(index);
     }
 
-    // Add this for Console Simulator (GameMain calls this via Player interface)
     @Override
     public int chooseMove(List<Integer> possibleMoves, int[] currentPositions) {
         return chooseMove(possibleMoves);

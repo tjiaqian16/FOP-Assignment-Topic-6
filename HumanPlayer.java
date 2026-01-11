@@ -34,7 +34,6 @@ public class HumanPlayer extends Player {
         return possibleMoves.get(choice);
     }
 
-    // Satisfy Player Abstract Class
     @Override
     public int chooseMove(List<Integer> possibleMoves, int[] currentPositions) {
         return chooseMove(possibleMoves);
