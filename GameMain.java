@@ -69,12 +69,12 @@ public class GameMain {
         // Inside Step 4: Create Player Object
         Player player;
         if (mode == 1) {
-            player = new HumanPlayer(); // Or your Anonymous Inner Class for Console
+            player = new HumanPlayer(); 
         } else if (mode == 2) {
             player = new RandomPlayer();
         } else {
             AIPlayer ai = new AIPlayer(game.targetPiece);
-            ai.setDiceSequence(loader.diceSequence); // CRITICAL
+            ai.setDiceSequence(loader.diceSequence); 
             player = ai;
         }
 
