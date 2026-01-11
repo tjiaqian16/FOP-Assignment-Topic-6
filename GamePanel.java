@@ -338,28 +338,40 @@ public class GamePanel extends BackgroundImagePanel {
     private void handleGridClick(int index) {
         if (!isHumanTurn) return;
 
-        int clickedPieceId = getPieceAt(index);
-
-        if (clickedPieceId != -1 && humanPlayer.selectPiece(clickedPieceId)) {
-            highlightValidPieces();
-            gridButtons[index].setBackground(new Color(255, 140, 0)); 
-            
-            for (int r = 0; r < BOARD_SIZE * BOARD_SIZE; r++) {
-                if (humanPlayer.isValidDestination(r)) {
-                    gridButtons[r].setEnabled(true); 
-                    gridButtons[r].setBackground(new Color(144, 238, 144)); 
-                    gridButtons[r].setBorder(BorderFactory.createLineBorder(new Color(34, 139, 34), 2));
-                }
-            }
-            infoLabel.setText("Selected P" + clickedPieceId + ". Now click a Green Square.");
-            SoundManager.getInstance().playSound("click.wav");
-            return;
-        }
-
-        if (humanPlayer.isValidDestination(index)) {
+        // --- 1. PRIORITY: CHECK FOR MOVE / CAPTURE FIRST ---
+        // We check if the clicked square is a valid destination for the CURRENTLY selected piece.
+        // If it is, we execute the move immediately. This allows capturing P6 with P3 (or vice versa).
+        if (humanPlayer.getSelectedPiece() != -1 && humanPlayer.isValidDestination(index)) {
             executeMove(humanPlayer.getSelectedPiece(), index);
             isHumanTurn = false;
             finishTurn();
+            return; // Stop here! Do not try to select the piece we just captured/moved to.
+        }
+
+        // --- 2. SECONDARY: CHECK FOR SELECTION ---
+        // We only reach this code if the click was NOT a valid move.
+        // This handles selecting a new piece or changing selection.
+        int clickedPieceId = getPieceAt(index);
+
+        if (clickedPieceId != -1 && humanPlayer.selectPiece(clickedPieceId)) {
+            highlightValidPieces(); // Reset board highlights (Yellow)
+            
+            // Highlight the specifically selected piece (Orange)
+            gridButtons[index].setBackground(new Color(255, 140, 0)); 
+            
+            // Highlight valid destinations for this new selection (Green)
+            // We iterate through all squares to find valid moves
+            for (int r = 0; r < BOARD_SIZE * BOARD_SIZE; r++) { 
+                if (humanPlayer.isValidDestination(r)) {
+                    gridButtons[r].setEnabled(true); 
+                    gridButtons[r].setBackground(new Color(144, 238, 144)); // Light Green
+                    gridButtons[r].setBorder(BorderFactory.createLineBorder(new Color(34, 139, 34), 2));
+                }
+            }
+            
+            infoLabel.setText("Selected P" + clickedPieceId + ". Now click a Green Square.");
+            SoundManager.getInstance().playSound("click.wav");
+            return;
         }
     }
 
