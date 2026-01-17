@@ -132,7 +132,7 @@ public class GameMain {
         else if (targetCaptured) 
             System.out.println("\nFAILED! Target piece P" + game.targetPiece + " was captured.");
         else 
-            System.out.println("\nFAILED! Not solved within 30 moves.");
+            System.out.println("\nFAILED! Puzzle not solved within 30 moves.");
         
         scanner.close();
     }
