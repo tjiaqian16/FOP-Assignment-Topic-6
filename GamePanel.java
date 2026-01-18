@@ -292,7 +292,7 @@ public class GamePanel extends BackgroundImagePanel {
             infoLabel.setText(playerName + " (Dice " + dice + ") moves P" + pieceId + "...");
             nextTurnButton.setEnabled(false); 
 
-            Timer animationTimer = new Timer(1500, e -> {
+            Timer animationTimer = new Timer(500, e -> {
                 executeMove(pieceId, destination);
                 finishTurn();
             });

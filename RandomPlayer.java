@@ -8,7 +8,6 @@ public class RandomPlayer extends Player {
         this.random = new Random();
     }
 
-    // Keep this for GUI compatibility (GamePanel calls this)
     public int chooseMove(List<Integer> possibleMoves) {
         if (possibleMoves == null || possibleMoves.isEmpty()) {
             return -1;

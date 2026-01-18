@@ -13,7 +13,7 @@ public class HumanPlayer extends Player {
         this.scanner = new Scanner(System.in);
     }
 
-    // 1. CONSOLE METHOD (Delegated)
+    // 1. CONSOLE
     public int chooseMove(List<Integer> possibleMoves) {
         System.out.println("--- Human Player's Turn ---");
         System.out.println("Available Moves:");
@@ -39,7 +39,7 @@ public class HumanPlayer extends Player {
         return chooseMove(possibleMoves);
     }
 
-    // 2. GUI METHODS
+    // 2. GUI 
     public void setCurrentMoves(List<Integer> moves) {
         this.currentPossibleMoves = moves;
         this.selectedPiece = -1; 
